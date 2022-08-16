@@ -10,7 +10,7 @@ import {
   unpatch,
   ToggleField,
 } from "decky-frontend-lib";
-import { VFC } from "react";
+import { VFC, useState, useEffect } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import { AudioParent } from "./gamepadAudioFinder/gamepadAudioFinder";
 
@@ -20,20 +20,12 @@ import { AudioParent } from "./gamepadAudioFinder/gamepadAudioFinder";
 // }
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
-  // const [result, setResult] = useState<number | undefined>();
+  const [activeSound, setActiveSound] = useState<number>(-2);
+  useEffect(() => {
+    reloadPatch();
+  });
 
-  // const onClick = async () => {
-  //   const result = await serverAPI.callPluginMethod<AddMethodArgs, number>(
-  //     "add",
-  //     {
-  //       left: 2,
-  //       right: 2,
-  //     }
-  //   );
-  //   if (result.success) {
-  //     setResult(result.result);
-  //   }
-  // };
+  let sounds = ["Phantom"];
 
   function reloadPatch() {
     unpatch(
@@ -45,7 +37,22 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
       "PlayAudioURL",
       (args) => {
-        const newSoundURL = args[0].replace("sounds/", "sounds_custom/");
+        let newSoundURL: string = "";
+        switch (activeSound) {
+          case -2: // default
+            newSoundURL = args[0];
+            break;
+          case -1: // silent
+            // Set path to somewhere that doesn't exist so nothing plays
+            newSoundURL = args[0].replace("sounds/", "sounds_silent/");
+            break;
+          default:
+            newSoundURL = args[0].replace(
+              "sounds/",
+              `sounds_custom/${sounds[activeSound]}/`
+            );
+            break;
+        }
         args[0] = newSoundURL;
         return [newSoundURL];
       }
@@ -68,13 +75,17 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         <PanelSectionRow>
           <DropdownItem
             bottomSeparator={true}
-            label={`Sound Effects`}
-            menuLabel={`Sound Effects`}
+            label={`Sounds`}
+            menuLabel={`Sounds`}
             rgOptions={[
-              { label: "Default", data: 0 },
-              { label: "Phantom", data: 1 },
+              { label: "Default", data: -2 },
+              { label: "Silent", data: -1 },
+              { label: "Phantom", data: 0 },
             ]}
-            selectedOption={0}
+            selectedOption={activeSound}
+            onChange={async (option) => {
+              setActiveSound(option.data);
+            }}
           />
         </PanelSectionRow>
       </PanelSection>
@@ -84,6 +95,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             bottomSeparator={false}
             checked={false}
             label={"Limit Music to Library"}
+            disabled={true}
           />
         </PanelSectionRow>
         <PanelSectionRow>
