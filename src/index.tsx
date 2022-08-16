@@ -1,16 +1,14 @@
 import {
   ButtonItem,
   definePlugin,
-  Menu,
-  MenuItem,
   PanelSection,
   PanelSectionRow,
   ServerAPI,
-  showContextMenu,
   staticClasses,
   DropdownItem,
   beforePatch,
   unpatch,
+  ToggleField,
 } from "decky-frontend-lib";
 import { VFC } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
@@ -37,14 +35,41 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   //   }
   // };
 
+  function reloadPatch() {
+    unpatch(
+      AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
+      "PlayAudioURL"
+    );
+
+    beforePatch(
+      AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
+      "PlayAudioURL",
+      (args) => {
+        const newSoundURL = args[0].replace("sounds/", "sounds_custom/");
+        args[0] = newSoundURL;
+        return [newSoundURL];
+      }
+    );
+  }
+
   return (
     <div>
-      <PanelSection title="Sound Effects">
+      <PanelSection title="Packs">
+        <PanelSectionRow>
+          <DropdownItem
+            bottomSeparator={false}
+            label={`Music`}
+            menuLabel={`Music`}
+            rgOptions={[{ label: "Coming Soon", data: 0 }]}
+            selectedOption={0}
+            disabled={true}
+          />
+        </PanelSectionRow>
         <PanelSectionRow>
           <DropdownItem
             bottomSeparator={true}
-            label={`Sound Effects Pack`}
-            menuLabel={`Sound Effects Pack`}
+            label={`Sound Effects`}
+            menuLabel={`Sound Effects`}
             rgOptions={[
               { label: "Default", data: 0 },
               { label: "Phantom", data: 1 },
@@ -53,20 +78,24 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           />
         </PanelSectionRow>
       </PanelSection>
-      <PanelSection title="Other">
+      <PanelSection title="Configuration">
+        <PanelSectionRow>
+          <ToggleField
+            bottomSeparator={false}
+            checked={false}
+            label={"Limit Music to Library"}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem bottomSeparator={false} layout="below">
+            Manage Packs
+          </ButtonItem>
+        </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem
+            bottomSeparator={true}
             layout="below"
-            onClick={(e) =>
-              showContextMenu(
-                <Menu label="Menu" cancelText="CAAAANCEL" onCancel={() => {}}>
-                  <MenuItem onSelected={() => {}}>Item #1</MenuItem>
-                  <MenuItem onSelected={() => {}}>Item #2</MenuItem>
-                  <MenuItem onSelected={() => {}}>Item #3</MenuItem>
-                </Menu>,
-                e.currentTarget ?? window
-              )
-            }
+            onClick={() => reloadPatch()}
           >
             Reload Plugin
           </ButtonItem>
@@ -81,7 +110,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
     "PlayAudioURL",
     (args) => {
-      const newSoundURL = args[0].replace("sounds/", "sounds_custom/");
+      const newSoundURL = args[0].replace("sounds/", "sounds/");
       args[0] = newSoundURL;
       return [newSoundURL];
     }
