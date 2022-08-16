@@ -1,10 +1,10 @@
 {
-  "name": "Example Plugin",
-  "author": "John Doe",
+  "name": "Audio Loader",
+  "author": "EMERALD0874, beebls",
   "flags": ["debug", "_root"],
   "publish": {
-    "tags": ["template", "root"],
-    "description": "Decky example plugin.",
+    "tags": ["style", "media", "music"],
+    "description": "Replaces Steam UI sound effects with custom sounds.",
     "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
   }
 }

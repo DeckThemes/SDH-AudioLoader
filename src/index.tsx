@@ -1,20 +1,20 @@
 import {
   ButtonItem,
   definePlugin,
-  DialogButton,
   Menu,
   MenuItem,
   PanelSection,
   PanelSectionRow,
-  Router,
   ServerAPI,
   showContextMenu,
   staticClasses,
+  DropdownItem,
+  beforePatch,
+  unpatch,
 } from "decky-frontend-lib";
 import { VFC } from "react";
-import { FaShip } from "react-icons/fa";
-
-import logo from "../assets/logo.png";
+import { RiFolderMusicFill } from "react-icons/ri";
+import { AudioParent } from "./gamepadAudioFinder/gamepadAudioFinder";
 
 // interface AddMethodArgs {
 //   left: number;
@@ -38,68 +38,64 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   // };
 
   return (
-    <PanelSection title="Panel Section">
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={(e) =>
-            showContextMenu(
-              <Menu label="Menu" cancelText="CAAAANCEL" onCancel={() => {}}>
-                <MenuItem onSelected={() => {}}>Item #1</MenuItem>
-                <MenuItem onSelected={() => {}}>Item #2</MenuItem>
-                <MenuItem onSelected={() => {}}>Item #3</MenuItem>
-              </Menu>,
-              e.currentTarget ?? window
-            )
-          }
-        >
-          Server says yolo
-        </ButtonItem>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <img src={logo} />
-        </div>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => {
-            Router.CloseSideMenus();
-            Router.Navigate("/decky-plugin-test");
-          }}
-        >
-          Router
-        </ButtonItem>
-      </PanelSectionRow>
-    </PanelSection>
-  );
-};
-
-const DeckyPluginRouterTest: VFC = () => {
-  return (
-    <div style={{ marginTop: "50px", color: "white" }}>
-      Hello World!
-      <DialogButton onClick={() => Router.NavigateToStore()}>
-        Go to Store
-      </DialogButton>
+    <div>
+      <PanelSection title="Sound Effects">
+        <PanelSectionRow>
+          <DropdownItem
+            bottomSeparator={true}
+            label={`Sound Effects Pack`}
+            menuLabel={`Sound Effects Pack`}
+            rgOptions={[
+              { label: "Default", data: 0 },
+              { label: "Phantom", data: 1 },
+            ]}
+            selectedOption={0}
+          />
+        </PanelSectionRow>
+      </PanelSection>
+      <PanelSection title="Other">
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={(e) =>
+              showContextMenu(
+                <Menu label="Menu" cancelText="CAAAANCEL" onCancel={() => {}}>
+                  <MenuItem onSelected={() => {}}>Item #1</MenuItem>
+                  <MenuItem onSelected={() => {}}>Item #2</MenuItem>
+                  <MenuItem onSelected={() => {}}>Item #3</MenuItem>
+                </Menu>,
+                e.currentTarget ?? window
+              )
+            }
+          >
+            Reload Plugin
+          </ButtonItem>
+        </PanelSectionRow>
+      </PanelSection>
     </div>
   );
 };
 
 export default definePlugin((serverApi: ServerAPI) => {
-  serverApi.routerHook.addRoute("/decky-plugin-test", DeckyPluginRouterTest, {
-    exact: true,
-  });
+  beforePatch(
+    AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
+    "PlayAudioURL",
+    (args) => {
+      const newSoundURL = args[0].replace("sounds/", "sounds_custom/");
+      args[0] = newSoundURL;
+      return [newSoundURL];
+    }
+  );
 
   return {
-    title: <div className={staticClasses.Title}>Example Plugin</div>,
+    title: <div className={staticClasses.Title}>Audio Loader</div>,
     content: <Content serverAPI={serverApi} />,
-    icon: <FaShip />,
-    onDismount() {
-      serverApi.routerHook.removeRoute("/decky-plugin-test");
+    icon: <RiFolderMusicFill />,
+    onDismount: () => {
+      unpatch(
+        AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
+        "PlayAudioURL"
+      );
     },
   };
 });
