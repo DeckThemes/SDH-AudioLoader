@@ -12,7 +12,9 @@ import {
 } from "decky-frontend-lib";
 import { VFC, useState, useEffect } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
+import { Pack } from "./classes";
 import { AudioParent } from "./gamepadAudioFinder/gamepadAudioFinder";
+import * as python from "./python";
 
 // interface AddMethodArgs {
 //   left: number;
@@ -21,11 +23,12 @@ import { AudioParent } from "./gamepadAudioFinder/gamepadAudioFinder";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const [activeSound, setActiveSound] = useState<number>(-2);
-  useEffect(() => {
-    reloadPatch();
-  });
+  const [soundPacks, setSoundPacks] = useState<Pack[]>([]);
 
-  let sounds = ["Phantom"];
+  useEffect(() => {
+    python.resolve(python.getSoundPacks(), setSoundPacks);
+    reloadPatch();
+  }, []);
 
   function reloadPatch() {
     unpatch(
@@ -37,23 +40,27 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
       "PlayAudioURL",
       (args) => {
+        console.log(activeSound);
         let newSoundURL: string = "";
         switch (activeSound) {
-          case -2: // default
+          case -2: // Default
             newSoundURL = args[0];
             break;
-          case -1: // silent
+          case -1: // Silent
             // Set path to somewhere that doesn't exist so nothing plays
             newSoundURL = args[0].replace("sounds/", "sounds_silent/");
             break;
           default:
             newSoundURL = args[0].replace(
               "sounds/",
-              `sounds_custom/${sounds[activeSound]}/`
+              `sounds_custom/${soundPacks[activeSound].packPath
+                .split("/")
+                .pop()}/`
             );
             break;
         }
         args[0] = newSoundURL;
+        console.log(newSoundURL);
         return [newSoundURL];
       }
     );
@@ -80,8 +87,11 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             rgOptions={[
               { label: "Default", data: -2 },
               { label: "Silent", data: -1 },
-              { label: "Phantom", data: 0 },
-            ]}
+            ].concat(
+              soundPacks
+                .map((p, index) => ({ label: p.name, data: index }))
+                .sort((a, b) => a.label.localeCompare(b.label))
+            )}
             selectedOption={activeSound}
             onChange={async (option) => {
               setActiveSound(option.data);
@@ -118,6 +128,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 };
 
 export default definePlugin((serverApi: ServerAPI) => {
+  python.setServer(serverApi);
+
   beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
     "PlayAudioURL",
