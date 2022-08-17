@@ -16,11 +16,6 @@ import { Pack } from "./classes";
 import { AudioParent } from "./gamepadAudioFinder/gamepadAudioFinder";
 import * as python from "./python";
 
-// interface AddMethodArgs {
-//   left: number;
-//   right: number;
-// }
-
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const [activeSound, setActiveSound] = useState<number>(-2);
   const [soundPacks, setSoundPacks] = useState<Pack[]>([]);
