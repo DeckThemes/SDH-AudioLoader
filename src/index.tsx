@@ -10,15 +10,21 @@ import {
   unpatch,
   ToggleField,
 } from "decky-frontend-lib";
-import { VFC, useState, useEffect } from "react";
+import { VFC, useEffect } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
-import { Pack } from "./classes";
-import { AudioParent } from "./gamepadAudioFinder/gamepadAudioFinder";
+import { AudioParent } from "./gamepadAudioFinder";
 import * as python from "./python";
+import {
+  GlobalState,
+  GlobalStateContextProvider,
+  useGlobalState,
+} from "./state/GlobalState";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
-  const [activeSound, setActiveSound] = useState<number>(-2);
-  const [soundPacks, setSoundPacks] = useState<Pack[]>([]);
+  const { activeSound, setActiveSound, soundPacks, setSoundPacks } =
+    useGlobalState();
+
+  console.log(activeSound, setActiveSound, soundPacks, setSoundPacks);
 
   useEffect(() => {
     python.resolve(python.getSoundPacks(), setSoundPacks);
@@ -35,7 +41,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
       "PlayAudioURL",
       (args) => {
-        console.log(activeSound);
         let newSoundURL: string = "";
         switch (activeSound) {
           case -2: // Default
@@ -48,14 +53,11 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           default:
             newSoundURL = args[0].replace(
               "sounds/",
-              `sounds_custom/${soundPacks[activeSound].packPath
-                .split("/")
-                .pop()}/`
+              `sounds_custom/${soundPacks[activeSound].path}/`
             );
             break;
         }
         args[0] = newSoundURL;
-        console.log(newSoundURL);
         return [newSoundURL];
       }
     );
@@ -64,16 +66,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   return (
     <div>
       <PanelSection title="Packs">
-        <PanelSectionRow>
-          <DropdownItem
-            bottomSeparator={false}
-            label={`Music`}
-            menuLabel={`Music`}
-            rgOptions={[{ label: "Coming Soon", data: 0 }]}
-            selectedOption={0}
-            disabled={true}
-          />
-        </PanelSectionRow>
         <PanelSectionRow>
           <DropdownItem
             bottomSeparator={true}
@@ -93,8 +85,18 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             }}
           />
         </PanelSectionRow>
+        <PanelSectionRow>
+          <DropdownItem
+            bottomSeparator={false}
+            label={`Music`}
+            menuLabel={`Music`}
+            rgOptions={[{ label: "Coming Soon", data: 0 }]}
+            selectedOption={0}
+            disabled={true}
+          />
+        </PanelSectionRow>
       </PanelSection>
-      <PanelSection title="Configuration">
+      <PanelSection title="Settings">
         <PanelSectionRow>
           <ToggleField
             bottomSeparator={false}
@@ -103,6 +105,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             disabled={true}
           />
         </PanelSectionRow>
+      </PanelSection>
+      <PanelSection title="Management">
         <PanelSectionRow>
           <ButtonItem bottomSeparator={false} layout="below">
             Manage Packs
@@ -125,6 +129,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 export default definePlugin((serverApi: ServerAPI) => {
   python.setServer(serverApi);
 
+  const state: GlobalState = new GlobalState();
+
   beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
     "PlayAudioURL",
@@ -137,7 +143,11 @@ export default definePlugin((serverApi: ServerAPI) => {
 
   return {
     title: <div className={staticClasses.Title}>Audio Loader</div>,
-    content: <Content serverAPI={serverApi} />,
+    content: (
+      <GlobalStateContextProvider globalStateClass={state}>
+        <Content serverAPI={serverApi} />
+      </GlobalStateContextProvider>
+    ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
       unpatch(
