@@ -17,3 +17,17 @@ export class Pack {
     this.author = this.data.author;
   }
 }
+
+export interface packDbEntry {
+  author: string;
+  description: string;
+  download_url: string;
+  id: string;
+  last_changed: string;
+  manifest_version: number;
+  music: boolean;
+  name: string;
+  preview_image: string;
+  source: string;
+  version: string;
+}

@@ -6,13 +6,16 @@ import {
   ServerAPI,
   staticClasses,
   DropdownItem,
+  Router,
   beforePatch,
   unpatch,
   ToggleField,
+  SidebarNavigation,
 } from "decky-frontend-lib";
 import { VFC, useMemo } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import { AudioParent } from "./gamepadAudioFinder";
+import { PackBrowserPage } from "./pack-manager/PackBrowserPage";
 import * as python from "./python";
 import {
   GlobalState,
@@ -57,10 +60,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           case "Default":
             newSoundURL = args[0];
             break;
-          case "Silent":
-            // Set path to somewhere that doesn't exist so nothing plays
-            newSoundURL = args[0].replace("sounds/", "sounds_silent/");
-            break;
           default:
             const currentPack = soundPacks.find((e) => e.name === activeSound);
             if (currentPack?.ignore.includes(args[0].slice(8))) {
@@ -81,8 +80,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 
   const SoundPackDropdownOptions = useMemo(() => {
     return [
-      { label: "Default", data: -2 },
-      { label: "Silent", data: -1 },
+      { label: "Default", data: -1 },
       ...soundPacks
         .map((p, index) => ({ label: p.name, data: index }))
         // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
@@ -104,7 +102,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               // the "?? -2" is there incase find returns undefined (the currently selected theme was deleted or something)
               // it NEEDS to be a nullish coalescing operator because 0 needs to be treated as true
               SoundPackDropdownOptions.find((e) => e.label === activeSound)
-                ?.data ?? -2
+                ?.data ?? -1
             }
             onChange={async (option) => {
               setActiveSound(option.label);
@@ -141,7 +139,14 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       </PanelSection>
       <PanelSection title="Management">
         <PanelSectionRow>
-          <ButtonItem bottomSeparator={false} layout="below">
+          <ButtonItem
+            bottomSeparator={false}
+            layout="below"
+            onClick={() => {
+              Router.CloseSideMenus();
+              Router.Navigate("/audiopack-manager");
+            }}
+          >
             Manage Packs
           </ButtonItem>
         </PanelSectionRow>
@@ -156,6 +161,27 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         </PanelSectionRow>
       </PanelSection>
     </div>
+  );
+};
+
+const PackManagerRouter: VFC = () => {
+  return (
+    <SidebarNavigation
+      title="Pack Manager"
+      showTitle
+      pages={[
+        {
+          title: "Browse Themes",
+          content: <PackBrowserPage />,
+          route: "/audiopack-manager/browser",
+        },
+        // {
+        //   title: "Uninstall Themes",
+        //   content: <UninstallThemePage />,
+        //   route: "/theme-manager/uninstall",
+        // },
+      ]}
+    />
   );
 };
 
@@ -175,10 +201,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       switch (activeSound) {
         case "Default":
           newSoundURL = args[0];
-          break;
-        case "Silent":
-          // Set path to somewhere that doesn't exist so nothing plays
-          newSoundURL = args[0].replace("sounds/", "sounds_silent/");
           break;
         default:
           const currentPack = soundPacks.find((e) => e.name === activeSound);
@@ -207,6 +229,12 @@ export default definePlugin((serverApi: ServerAPI) => {
     state.setMusicEnabled(data?.music_enabled || false);
     state.setMusicLibraryOnly(data?.music_library_only || false);
   });
+
+  serverApi.routerHook.addRoute("/audiopack-manager", () => (
+    <GlobalStateContextProvider globalStateClass={state}>
+      <PackManagerRouter />
+    </GlobalStateContextProvider>
+  ));
 
   return {
     title: <div className={staticClasses.Title}>Audio Loader</div>,

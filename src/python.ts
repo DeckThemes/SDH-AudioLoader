@@ -30,6 +30,13 @@ export function setServer(s: ServerAPI) {
   server = s;
 }
 
+export async function fetchPackDb(): Promise<any> {
+  return await server!.fetchNoCors(
+    "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.0.0/packs.json",
+    { method: "GET" }
+  );
+}
+
 export function getSoundPacks(): Promise<any> {
   return server!.callPluginMethod("get_sound_packs", {});
 }
