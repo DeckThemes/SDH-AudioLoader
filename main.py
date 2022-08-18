@@ -1,4 +1,5 @@
 import json, tempfile, asyncio
+import shutil
 import os
 from logging import getLogger
 
@@ -127,6 +128,14 @@ class Pack:
         
         self.packPath = packPath
 
+    async def delete(self) -> Result:
+        try:
+            shutil.rmtree(self.packPath)
+        except Exception as e:
+            return Result(False, str(e))
+
+        return Result(True)
+
     def to_dict(self) -> dict:
         return {
             "name": self.name,
@@ -150,6 +159,7 @@ class Plugin:
             Log("Audio Loader - Found config file")
             with open(configPath, "r") as fp:
                 data = json.load(fp)
+                self.config = data
                 return data
 
     async def set_config(self, configObj: object):
@@ -166,7 +176,26 @@ class Plugin:
     async def download_pack(self, uuid: str) -> dict:
         return (await self.remote.install(uuid)).to_dict()
 
+    async def delete_pack(self, name: str) -> Result:
+        pack = None
+
+        for x in self.soundPacks:
+            if x.name == name:
+                pack = x
+                break
+        
+        if (pack == None):
+            return Result(False, f"Could not find {name}")
+        
+        result = await pack.delete()
+        if not result.success:
+            return result.to_dict()
+        
+        self.soundPacks.remove(pack)
+        return Result(True).to_dict()
+
     async def parse_packs(self, packsDir : str):
+        self.soundPacks = []
         possiblePacks = [str(p) for p in os.listdir(packsDir)]
 
         for p in possiblePacks:
@@ -213,6 +242,7 @@ class Plugin:
             await create_config(configPath)
 
         await self.parse_packs(self, packsPath)
+        await self.get_config(self)
 
         
         Log("Audio Loader - Config existing is {}".format(os.path.exists(configPath)))
@@ -220,6 +250,11 @@ class Plugin:
 
     async def _main(self):
         self.soundPacks = []
+        self.config = {
+            "music_enabled": False,
+            "music_library_only": False,
+            "selected_pack": "Default" 
+        }
 
         self.remote = RemoteInstall(self)
         await self.remote.load()

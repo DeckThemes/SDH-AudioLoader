@@ -48,6 +48,10 @@ export function downloadPack(uuid: string): Promise<any> {
   return server!.callPluginMethod("download_pack", { uuid: uuid });
 }
 
+export function deletePack(name: string): Promise<any> {
+  return server!.callPluginMethod("delete_pack", { name: name });
+}
+
 export function getSoundPacks(): Promise<any> {
   return server!.callPluginMethod("get_sound_packs", {});
 }

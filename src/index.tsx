@@ -15,7 +15,7 @@ import {
 import { VFC, useMemo } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import { AudioParent } from "./gamepadAudioFinder";
-import { PackBrowserPage } from "./pack-manager/PackBrowserPage";
+import { PackBrowserPage, UninstallPage } from "./pack-manager";
 import * as python from "./python";
 import {
   GlobalState,
@@ -174,15 +174,15 @@ const PackManagerRouter: VFC = () => {
       showTitle
       pages={[
         {
-          title: "Browse Themes",
+          title: "Browse Packs",
           content: <PackBrowserPage />,
           route: "/audiopack-manager/browser",
         },
-        // {
-        //   title: "Uninstall Themes",
-        //   content: <UninstallThemePage />,
-        //   route: "/theme-manager/uninstall",
-        // },
+        {
+          title: "Uninstall Packs",
+          content: <UninstallPage />,
+          route: "/audiopack-manager/uninstall",
+        },
       ]}
     />
   );
