@@ -62,11 +62,14 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             newSoundURL = args[0].replace("sounds/", "sounds_silent/");
             break;
           default:
+            const currentPack = soundPacks.find((e) => e.name === activeSound);
+            if (currentPack?.ignore.includes(args[0].slice(8))) {
+              newSoundURL = args[0];
+              break;
+            }
             newSoundURL = args[0].replace(
               "sounds/",
-              `sounds_custom/${
-                soundPacks.find((e) => e.name === activeSound)?.path || "/error"
-              }/`
+              `sounds_custom/${currentPack?.path || "/error"}/`
             );
             break;
         }
@@ -98,9 +101,10 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             rgOptions={SoundPackDropdownOptions}
             selectedOption={
               // activeSound now stores a string, this just finds the corresponding option for the label
-              // the "|| -2" is there incase find returns undefined (the currently selected theme was deleted or something)
+              // the "?? -2" is there incase find returns undefined (the currently selected theme was deleted or something)
+              // it NEEDS to be a nullish coalescing operator because 0 needs to be treated as true
               SoundPackDropdownOptions.find((e) => e.label === activeSound)
-                ?.data || -2
+                ?.data ?? -2
             }
             onChange={async (option) => {
               setActiveSound(option.label);
@@ -177,11 +181,14 @@ export default definePlugin((serverApi: ServerAPI) => {
           newSoundURL = args[0].replace("sounds/", "sounds_silent/");
           break;
         default:
+          const currentPack = soundPacks.find((e) => e.name === activeSound);
+          if (currentPack?.ignore.includes(args[0].slice(8))) {
+            newSoundURL = args[0];
+            break;
+          }
           newSoundURL = args[0].replace(
             "sounds/",
-            `sounds_custom/${
-              soundPacks.find((e) => e.name === activeSound)?.path || "/error"
-            }/`
+            `sounds_custom/${currentPack?.path || "/error"}/`
           );
           break;
       }
