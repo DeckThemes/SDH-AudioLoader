@@ -12,7 +12,7 @@ import {
   ToggleField,
   SidebarNavigation,
 } from "decky-frontend-lib";
-import { VFC, useMemo } from "react";
+import { VFC, useMemo, useEffect, useState } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import { AudioParent } from "./gamepadAudioFinder";
 import { PackBrowserPage, UninstallPage } from "./pack-manager";
@@ -35,7 +35,18 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     setMusicLibraryOnly,
   } = useGlobalState();
 
+  const [dummyFuncResult, setDummyResult] = useState<boolean>(false);
+
+  function dummyFuncTest() {
+    python.resolve(python.dummyFunction(), setDummyResult);
+  }
+
+  useEffect(() => {
+    dummyFuncTest();
+  }, []);
+
   function reloadPlugin() {
+    dummyFuncTest();
     python.resolve(python.reloadPacksDir(), () => {
       python.resolve(python.getSoundPacks(), (data: any) => {
         setSoundPacks(data);
@@ -90,6 +101,17 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         .sort((a, b) => a.label.localeCompare(b.label)),
     ];
   }, [soundPacks]);
+
+  if (!dummyFuncResult) {
+    return (
+      <PanelSectionRow>
+        <span>
+          AudioLoader failed to initialize, try reloading, and if that doesn't
+          work, try restarting your deck.
+        </span>
+      </PanelSectionRow>
+    );
+  }
 
   return (
     <div>

@@ -148,6 +148,9 @@ class Pack:
         }
 
 class Plugin:
+    async def dummy_function(self) -> bool:
+        return True
+
     async def get_sound_packs(self) -> list:
         return [x.to_dict() for x in self.soundPacks]
 

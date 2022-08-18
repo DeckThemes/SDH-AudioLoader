@@ -63,3 +63,7 @@ export function getConfig(): Promise<any> {
 export function setConfig(configObj: object) {
   return server!.callPluginMethod("set_config", { configObj: configObj });
 }
+
+export function dummyFunction(): Promise<any> {
+  return server!.callPluginMethod("dummy_function", {});
+}
