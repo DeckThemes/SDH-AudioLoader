@@ -33,3 +33,11 @@ export function setServer(s: ServerAPI) {
 export function getSoundPacks(): Promise<any> {
   return server!.callPluginMethod("get_sound_packs", {});
 }
+
+export function getConfig(): Promise<any> {
+  return server!.callPluginMethod("get_config", {});
+}
+
+export function setConfig(configObj: object) {
+  return server!.callPluginMethod("set_config", { configObj: configObj });
+}

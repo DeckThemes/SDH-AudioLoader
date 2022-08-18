@@ -2,6 +2,13 @@ import json
 import os
 from logging import getLogger
 
+starter_config_data = {
+  "music_enabled": False,
+  "music_library_only": False,
+  "selected_pack": "Default" 
+}
+starter_config_string = json.dumps(starter_config_data)
+
 logger = getLogger("AUDIO_LOADER")
 AUDIO_LOADER_VERSION = 1
 
@@ -21,6 +28,13 @@ async def create_folder(path):
         return
     os.mkdir(path)
     Log("Audio Loader - {} folder created".format(path))
+
+async def create_config(path):
+    if os.path.exists(path):
+        Log("Audio Loader - Config file already exists at {}".format(path))
+        return
+    with open(path, 'w') as fp:
+        fp.write(starter_config_string)
 
 class Pack:
     def __init__(self, packPath : str, json : dict):
@@ -51,6 +65,27 @@ class Pack:
 class Plugin:
     async def get_sound_packs(self) -> list:
         return [x.to_dict() for x in self.soundPacks]
+
+    async def get_config(self) -> object:
+        configPath = "/home/deck/homebrew/sounds/config.json"
+
+        Log("Audio Loader - Fetching config file at {}".format(configPath))
+        if (os.path.exists(configPath)):
+            Log("Audio Loader - Found config file")
+            with open(configPath, "r") as fp:
+                data = json.load(fp)
+                return data
+
+    async def set_config(self, configObj: object):
+        configPath = "/home/deck/homebrew/sounds/config.json"
+
+        Log("Audio Loader - Setting config file at {}".format(configPath))
+        if (os.path.exists(configPath)):
+            Log("Audio Loader - Found config file")
+            json_string = json.dumps(configObj)
+            with open(configPath, "w") as fp:
+                fp.write(json_string)
+                return True
 
     async def _parse_packs(self, packsDir : str):
         possiblePacks = [str(p) for p in os.listdir(packsDir)]
@@ -84,6 +119,8 @@ class Plugin:
         packsPath = "/home/deck/homebrew/sounds"
         symlinkPath = "/home/deck/.local/share/Steam/steamui/sounds_custom"
 
+        configPath = "/home/deck/homebrew/sounds/config.json"
+
         Log("Audio Loader - Finding sound packs...")
         self.soundPacks = []
 
@@ -93,7 +130,14 @@ class Plugin:
         if (not os.path.exists(symlinkPath)):
             await create_symlink(packsPath, symlinkPath)
 
+        if (not os.path.exists(configPath)):
+            await create_config(configPath)
+
         await self._parse_packs(self, packsPath)
+
+        
+        Log("Audio Loader - Path existing is {}".format(os.path.exists(configPath)))
+
 
     async def _main(self):
         self.soundPacks = []
