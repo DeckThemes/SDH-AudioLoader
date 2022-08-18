@@ -31,7 +31,7 @@ export function setServer(s: ServerAPI) {
 }
 
 export async function fetchPackDb(): Promise<any> {
-  return await server!.fetchNoCors(
+  return server!.fetchNoCors(
     "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.0.0/packs.json",
     { method: "GET" }
   );
@@ -42,6 +42,10 @@ export function reloadPacksDir(): Promise<any> {
   return server!.callPluginMethod("parse_packs", {
     packsDir: "/home/deck/homebrew/sounds",
   });
+}
+
+export function downloadPack(uuid: string): Promise<any> {
+  return server!.callPluginMethod("download_pack", { uuid: uuid });
 }
 
 export function getSoundPacks(): Promise<any> {

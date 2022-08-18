@@ -37,11 +37,17 @@ export const PackBrowserPage: VFC = () => {
     }
   }
 
+  function fetchLocalPacks() {
+    python.resolve(python.reloadPacksDir(), () => {
+      python.resolve(python.getSoundPacks(), (data: any) => {
+        setSoundPacks(data);
+      });
+    });
+  }
+
   function reloadPacks() {
     fetchPackDb();
-    python.resolve(python.getSoundPacks(), (data: any) => {
-      setSoundPacks(data);
-    });
+    fetchLocalPacks();
   }
   useEffect(() => {
     fetchPackDb();
@@ -344,7 +350,16 @@ export const PackBrowserPage: VFC = () => {
                               disabled={
                                 isInstalling || installStatus === "installed"
                               }
-                              onClick={() => {}}
+                              onClick={() => {
+                                setInstalling(true);
+                                python.resolve(
+                                  python.downloadPack(e.id),
+                                  () => {
+                                    fetchLocalPacks();
+                                    setInstalling(false);
+                                  }
+                                );
+                              }}
                             >
                               <span className="AudioLoader_PackBrowser_SingleItem_InstallText">
                                 {installStatus === "outdated"
