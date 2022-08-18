@@ -2,14 +2,15 @@ import {
   DropdownOption,
   PanelSectionRow,
   DropdownItem,
-  ButtonItem,
   TextField,
   Focusable,
+  ButtonItem,
 } from "decky-frontend-lib";
 import { useEffect, VFC, useMemo } from "react";
 import { Pack, packDbEntry } from "../classes";
 import * as python from "../python";
 import { useGlobalState } from "../state/GlobalState";
+import "../audiomanager.css";
 
 export const PackBrowserPage: VFC = () => {
   const {
@@ -189,7 +190,7 @@ export const PackBrowserPage: VFC = () => {
                       height: "100%",
                     }}
                   >
-                    <div
+                    {/* <div
                       // I'm still using the format of div-with-a-bg-image, because I think that could make it a bit easier to add icons/text in front if we want
                       className="AudioLoader_PackBrowser_SingleItem_PreviewImage"
                       style={{
@@ -203,21 +204,71 @@ export const PackBrowserPage: VFC = () => {
                         flexDirection: "column",
                         alignItems: "center",
                       }}
-                    />
+                    /> */}
+                    <div
+                      // I'm still using the format of div-with-a-bg-image, because I think that could make it a bit easier to add icons/text in front if we want
+                      className="AudioLoader_PackBrowser_SingleItem_PreviewImageContainer"
+                      style={{
+                        width: "200px",
+                        height: "200px",
+                        position: "relative",
+                      }}
+                    >
+                      <div
+                        style={{
+                          backgroundImage:
+                            "url(https://i.imgur.com/nISGpci.png)",
+                          position: "absolute",
+                          top: "10%",
+                          left: "0",
+                          width: "80%",
+                          height: "80%",
+                          backgroundSize: "cover",
+                          zIndex: 3,
+                          borderRadius: "2px",
+                        }}
+                      />
+                      <div
+                        style={{
+                          backgroundImage: 'url("' + e.preview_image + '")',
+                          position: "absolute",
+                          top: "10%",
+                          left: "0",
+                          width: "80%",
+                          height: "80%",
+                          backgroundSize: "cover",
+                          zIndex: 2,
+                          borderRadius: "2px",
+                        }}
+                      />
+                      <div
+                        style={{
+                          backgroundImage:
+                            'url("https://i.imgur.com/V9t3728.png")',
+                          position: "absolute",
+                          top: "12.5%",
+                          right: "0",
+                          width: "75%",
+                          height: "75%",
+                          backgroundSize: "cover",
+                          zIndex: 1,
+                        }}
+                      />
+                    </div>
                     <div
                       style={{
                         width: "calc(100% - 220px)", // The calc is here so that the text section doesn't expand into the image
                         display: "flex",
                         flexDirection: "column",
                         height: "100%",
-                        marginLeft: "5px",
+                        marginLeft: "1em",
+                        justifyContent: "center",
                       }}
                     >
                       <span
                         className="AudioLoader_PackBrowser_SingleItem_ThemeName"
                         style={{
-                          marginTop: "5px",
-                          fontSize: "1.5em",
+                          fontSize: "1.25em",
                           fontWeight: "bold",
                           // This stuff here truncates it if it's too long (prolly not gonna happen on audioloader, just code from cssloader)
                           whiteSpace: "nowrap",
@@ -249,11 +300,15 @@ export const PackBrowserPage: VFC = () => {
                         {e.music ? "Music" : "Sound"} | {e.version}
                       </span>
                       <span
-                        className="AudioLoader_PackBrowser_SingleItem_AuthorText"
+                        className="AudioLoader_PackBrowser_SingleItem_DescriptionText"
                         style={{
-                          fontSize: "0.75em",
+                          fontSize: "13px",
                           textShadow: "rgb(48, 48, 48) 0px 0 10px",
-                          color: "#aaa",
+                          color: "#969696",
+                          WebkitLineClamp: "3",
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          display: "-webkit-box",
                         }}
                       >
                         {e.description ? (
@@ -268,13 +323,14 @@ export const PackBrowserPage: VFC = () => {
                       <div
                         className="AudioLoader_PackBrowser_SingleItem_InstallButtonContainer"
                         style={{
-                          marginTop: "auto",
+                          marginTop: "1em",
                           width: "245px",
+                          overflow: "hidden",
                         }}
                       >
                         <PanelSectionRow>
                           <div
-                            className="AudioLoader_PackBrowser_SingleItem_OpenExpandedViewContainer"
+                            className="AudioLoader_PackBrowser_SingleItem_InstallContainer"
                             style={{
                               // This padding here overrides the default padding put on PanelSectionRow's by Valve
                               // Before this, I was using negative margin to "shrink" the element, but this is a much better solution
@@ -290,7 +346,7 @@ export const PackBrowserPage: VFC = () => {
                               }
                               onClick={() => {}}
                             >
-                              <span className="AudioLoader_PackBrowser_SingleItem_OpenExpandedViewText">
+                              <span className="AudioLoader_PackBrowser_SingleItem_InstallText">
                                 {installStatus === "outdated"
                                   ? "Update Available"
                                   : installStatus === "uninstalled"
