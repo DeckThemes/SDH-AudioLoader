@@ -6,11 +6,12 @@ import {
   Focusable,
   ButtonItem,
 } from "decky-frontend-lib";
-import { useEffect, VFC, useMemo } from "react";
+import { useEffect, VFC, useMemo, useRef } from "react";
 import { Pack, packDbEntry } from "../classes";
 import * as python from "../python";
 import { useGlobalState } from "../state/GlobalState";
 import "../audiomanager.css";
+import { motion } from "framer-motion";
 
 export const PackBrowserPage: VFC = () => {
   const {
@@ -106,6 +107,8 @@ export const PackBrowserPage: VFC = () => {
     }
   }
 
+  const installRef = useRef(-1);
+
   return (
     <>
       <PanelSectionRow>
@@ -172,7 +175,7 @@ export const PackBrowserPage: VFC = () => {
                 return a.name.localeCompare(b.name);
             }
           })
-          .map((e: packDbEntry) => {
+          .map((e: packDbEntry, i) => {
             const installStatus = checkIfPackInstalled(e);
             return (
               // The outer 2 most divs are the background darkened/blurred image, and everything inside is the text/image/buttons
@@ -247,7 +250,16 @@ export const PackBrowserPage: VFC = () => {
                           borderRadius: "2px",
                         }}
                       />
-                      <div
+                      <motion.div
+                        animate={
+                          installRef.current === i ? { rotate: 360 } : {}
+                        }
+                        exit={{}}
+                        transition={{
+                          repeat: installRef.current === i ? Infinity : 0,
+                          duration: installRef.current === i ? 1.82 : 0.001,
+                          ease: "linear",
+                        }}
                         style={{
                           backgroundImage:
                             'url("https://i.imgur.com/V9t3728.png")',
@@ -258,6 +270,7 @@ export const PackBrowserPage: VFC = () => {
                           height: "75%",
                           backgroundSize: "cover",
                           zIndex: 1,
+                          rotate: 0,
                         }}
                       />
                     </div>
@@ -352,11 +365,14 @@ export const PackBrowserPage: VFC = () => {
                               }
                               onClick={() => {
                                 setInstalling(true);
+                                installRef.current = i;
                                 python.resolve(
                                   python.downloadPack(e.id),
                                   () => {
                                     fetchLocalPacks();
                                     setInstalling(false);
+                                    if (installRef.current === i)
+                                      installRef.current = -1;
                                   }
                                 );
                               }}
