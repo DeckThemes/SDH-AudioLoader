@@ -65,7 +65,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             newSoundURL = args[0].replace(
               "sounds/",
               `sounds_custom/${
-                // FIXME: for some weird ass reason i'm getting "Object may be undefined" error on soundPacks, fix this bullshit
                 soundPacks.find((e) => e.name === activeSound)?.path || "/error"
               }/`
             );
