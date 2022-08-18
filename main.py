@@ -87,7 +87,7 @@ class Plugin:
                 fp.write(json_string)
                 return True
 
-    async def _parse_packs(self, packsDir : str):
+    async def parse_packs(self, packsDir : str):
         possiblePacks = [str(p) for p in os.listdir(packsDir)]
 
         for p in possiblePacks:
@@ -133,10 +133,10 @@ class Plugin:
         if (not os.path.exists(configPath)):
             await create_config(configPath)
 
-        await self._parse_packs(self, packsPath)
+        await self.parse_packs(self, packsPath)
 
         
-        Log("Audio Loader - Path existing is {}".format(os.path.exists(configPath)))
+        Log("Audio Loader - Config existing is {}".format(os.path.exists(configPath)))
 
 
     async def _main(self):

@@ -36,9 +36,12 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   } = useGlobalState();
 
   function reloadPlugin() {
-    python.resolve(python.getSoundPacks(), (data: any) => {
-      setSoundPacks(data);
+    python.resolve(python.reloadPacksDir(), () => {
+      python.resolve(python.getSoundPacks(), (data: any) => {
+        setSoundPacks(data);
+      });
     });
+
     python.resolve(python.getConfig(), (data: any) => {
       // This just has fallbacks incase the fetch fails or the config is improperly formatted
       setActiveSound(data?.selected_pack || "Default");
