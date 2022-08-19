@@ -58,17 +58,19 @@ export const UninstallPage: VFC = () => {
 
   return (
     <>
-      {soundPacks.map((e: Pack) => (
-        <PanelSectionRow>
-          <ButtonItem
-            label={e.data.name}
-            onClick={() => handleUninstall(e)}
-            disabled={isUninstalling}
-          >
-            <FaTrash />
-          </ButtonItem>
-        </PanelSectionRow>
-      ))}
+      {soundPacks
+        .sort((a, b) => a.data.name.localeCompare(b.data.name))
+        .map((e: Pack) => (
+          <PanelSectionRow>
+            <ButtonItem
+              label={e.data.name}
+              onClick={() => handleUninstall(e)}
+              disabled={isUninstalling}
+            >
+              <FaTrash />
+            </ButtonItem>
+          </PanelSectionRow>
+        ))}
     </>
   );
 };
