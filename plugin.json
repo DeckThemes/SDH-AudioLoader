@@ -4,7 +4,7 @@
   "flags": ["debug", "_root"],
   "publish": {
     "tags": ["style", "media", "music"],
-    "description": "Replaces Steam UI sound effects with custom sounds.",
+    "description": "Replaces Steam UI sound effects with custom sounds and adds music to menus.",
     "image": "https://i.imgur.com/0Xuc1pr.png"
   }
 }
