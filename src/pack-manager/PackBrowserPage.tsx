@@ -199,21 +199,6 @@ export const PackBrowserPage: VFC = () => {
                       height: "100%",
                     }}
                   >
-                    {/* <div
-                      // I'm still using the format of div-with-a-bg-image, because I think that could make it a bit easier to add icons/text in front if we want
-                      className="AudioLoader_PackBrowser_SingleItem_PreviewImage"
-                      style={{
-                        width: "200px",
-                        backgroundImage: 'url("' + e.preview_image + '")',
-                        backgroundSize: "cover",
-                        backgroundRepeat: "no-repeat",
-                        height: "200px",
-                        display: "flex",
-                        position: "relative",
-                        flexDirection: "column",
-                        alignItems: "center",
-                      }}
-                    /> */}
                     <div
                       // I'm still using the format of div-with-a-bg-image, because I think that could make it a bit easier to add icons/text in front if we want
                       className="AudioLoader_PackBrowser_SingleItem_PreviewImageContainer"
@@ -240,6 +225,7 @@ export const PackBrowserPage: VFC = () => {
                       <div
                         style={{
                           backgroundImage: 'url("' + e.preview_image + '")',
+                          backgroundColor: "#21323d",
                           position: "absolute",
                           top: "10%",
                           left: "0",

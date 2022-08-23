@@ -255,6 +255,35 @@ export default definePlugin((serverApi: ServerAPI) => {
     state.setMusicLibraryOnly(data?.music_library_only || false);
   });
 
+  const AppStateRegistrar =
+    // SteamClient is something exposed by the SP tab of SteamUI, it's not a decky-frontend-lib thingy, but you can still call it normally
+    // Refer to the SteamClient.d.ts or just console.log(SteamClient) to see all of it's methods
+    SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
+      (update: AppState) => {
+        update.bRunning
+          ? console.log("GAME HAS BEEN STARTED")
+          : console.log("GAME HAS BEEN STOPPED");
+      }
+    );
+
+  // This variable is used to debounce these, as they tend to get called multiple times and I don't want stacked audio
+  let sideMenuOpen = false;
+  beforePatch(Router, "OpenSideMenu", (args) => {
+    if (!sideMenuOpen) {
+      sideMenuOpen = true;
+      // AudioParent.GamepadUIAudio.PlayAudioURL("/sounds_custom/drip.wav"); we might not use PlayAudioURL but this is where you would call it for QAM music
+      console.log("Side Menu Opened");
+    }
+    return args;
+  });
+  beforePatch(Router, "CloseSideMenus", (args) => {
+    if (sideMenuOpen) {
+      sideMenuOpen = false;
+      console.log("Side Menu Closed");
+    }
+    return args;
+  });
+
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
     <GlobalStateContextProvider globalStateClass={state}>
       <PackManagerRouter />
@@ -270,10 +299,13 @@ export default definePlugin((serverApi: ServerAPI) => {
     ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
+      unpatch(Router, "OpenSideMenu");
+      unpatch(Router, "CloseSideMenus");
       unpatch(
         AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
         "PlayAudioURL"
       );
+      AppStateRegistrar.unregister();
     },
   };
 });

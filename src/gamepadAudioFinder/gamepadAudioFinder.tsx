@@ -1,4 +1,4 @@
-import { Module, findModuleChild } from "../webpack";
+import { Module, findModuleChild } from "decky-frontend-lib";
 
 export const AudioParent = findModuleChild((m: Module) => {
   if (typeof m !== "object") return undefined;
