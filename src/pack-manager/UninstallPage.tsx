@@ -39,15 +39,19 @@ export const UninstallPage: VFC = () => {
         console.log(
           "Audio Loader - Attempted to uninstall applied sound/music, changing applied packs to Default"
         );
-        setActiveSound("Default");
-        setSelectedMusic("None");
-        if (menuMusic !== null) {
-          menuMusic.StopPlayback();
-          setMenuMusic(null);
+        if (activeSound === listEntry.data.name) setActiveSound("Default");
+        if (selectedMusic === listEntry.data.name) {
+          setSelectedMusic("None");
+          if (menuMusic !== null) {
+            menuMusic.StopPlayback();
+            setMenuMusic(null);
+          }
         }
         const configObj = {
-          selected_pack: "Default",
-          selected_music: "None",
+          selected_pack:
+            activeSound === listEntry.data.name ? "Default" : activeSound,
+          selected_music:
+            selectedMusic === listEntry.data.name ? "None" : activeSound,
         };
         python.setConfig(configObj);
       }

@@ -62,7 +62,7 @@ export class GlobalState {
 
   setMenuMusic(value: any) {
     this.menuMusic = value;
-    this.forceUpdate;
+    this.forceUpdate();
   }
 
   setActiveSound(value: string) {
