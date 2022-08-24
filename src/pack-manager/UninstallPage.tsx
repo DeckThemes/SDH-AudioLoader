@@ -12,8 +12,10 @@ export const UninstallPage: VFC = () => {
     setSoundPacks,
     activeSound,
     setActiveSound,
-    musicEnabled,
-    musicLibraryOnly,
+    selectedMusic,
+    setSelectedMusic,
+    menuMusic,
+    setMenuMusic,
   } = useGlobalState();
 
   const [isUninstalling, setUninstalling] = useState(false);
@@ -30,15 +32,22 @@ export const UninstallPage: VFC = () => {
     setUninstalling(true);
     python.resolve(python.deletePack(listEntry.data.name), () => {
       fetchLocalPacks();
-      if (activeSound === listEntry.data.name) {
+      if (
+        activeSound === listEntry.data.name ||
+        selectedMusic === listEntry.data.name
+      ) {
         console.log(
-          "Audio Loader - Attempted to uninstall applied sound, changing applied sound to Default"
+          "Audio Loader - Attempted to uninstall applied sound/music, changing applied packs to Default"
         );
         setActiveSound("Default");
+        setSelectedMusic("None");
+        if (menuMusic !== null) {
+          menuMusic.StopPlayback();
+          setMenuMusic(null);
+        }
         const configObj = {
-          music_enabled: musicEnabled,
-          music_library_only: musicLibraryOnly,
           selected_pack: "Default",
+          selected_music: "None",
         };
         python.setConfig(configObj);
       }
