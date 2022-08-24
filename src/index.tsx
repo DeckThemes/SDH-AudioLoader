@@ -214,6 +214,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   python.setServer(serverApi);
 
   const state: GlobalState = new GlobalState();
+  let menuMusic: any = null;
 
   beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
@@ -290,6 +291,15 @@ export default definePlugin((serverApi: ServerAPI) => {
     </GlobalStateContextProvider>
   ));
 
+  // Play menu music when starting plugin as this shouldn't happen inside of game
+  // TODO: Add check if game is currently running
+  menuMusic =
+    AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
+      "/sounds_custom/saul.mp3",
+      999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
+    );
+  console.log(menuMusic);
+
   return {
     title: <div className={staticClasses.Title}>Audio Loader</div>,
     content: (
@@ -299,6 +309,11 @@ export default definePlugin((serverApi: ServerAPI) => {
     ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
+      if (menuMusic != null) {
+        menuMusic.StopPlayback();
+        menuMusic = null;
+      }
+
       unpatch(Router, "OpenSideMenu");
       unpatch(Router, "CloseSideMenus");
       unpatch(
