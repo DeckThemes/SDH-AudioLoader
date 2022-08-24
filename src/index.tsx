@@ -215,6 +215,7 @@ export default definePlugin((serverApi: ServerAPI) => {
 
   const state: GlobalState = new GlobalState();
   let menuMusic: any = null;
+  let gamesRunning: Number[] = [];
 
   beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
@@ -261,9 +262,23 @@ export default definePlugin((serverApi: ServerAPI) => {
     // Refer to the SteamClient.d.ts or just console.log(SteamClient) to see all of it's methods
     SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
       (update: AppState) => {
-        update.bRunning
-          ? console.log("GAME HAS BEEN STARTED")
-          : console.log("GAME HAS BEEN STOPPED");
+        if (update.bRunning) {
+          gamesRunning.push(update.unAppID);
+          if (menuMusic != null) {
+            menuMusic.StopPlayback();
+            menuMusic = null;
+          }
+        } else {
+          for (let i = gamesRunning.length; i >= 0; i--) {
+            if (gamesRunning[i] === update.unAppID) gamesRunning.splice(i, 1);
+          }
+          if (gamesRunning.length === 0)
+            menuMusic =
+              AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
+                "/sounds_custom/saul.mp3",
+                999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
+              );
+        }
       }
     );
 
@@ -298,7 +313,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       "/sounds_custom/saul.mp3",
       999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
     );
-  console.log(menuMusic);
 
   return {
     title: <div className={staticClasses.Title}>Audio Loader</div>,
