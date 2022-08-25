@@ -320,7 +320,9 @@ export const PackBrowserPage: VFC = () => {
                           e.description
                         ) : (
                           <span>
-                            <i>No Description Provided</i>
+                            <i style={{ color: "#666" }}>
+                              No description provided.
+                            </i>
                           </span>
                         )}
                       </span>
