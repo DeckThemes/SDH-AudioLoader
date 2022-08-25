@@ -62,9 +62,7 @@ export const UninstallPage: VFC = () => {
   if (soundPacks.length === 0) {
     return (
       <PanelSectionRow>
-        <span>
-          No custom themes installed, find some in the 'Browse Themes' tab.
-        </span>
+        <span>No packs installed, find some in the 'Browse Packs' tab.</span>
       </PanelSectionRow>
     );
   }
