@@ -28,7 +28,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     gamesRunning,
     setActiveSound,
     soundPacks,
-    setSoundPacks,
     menuMusic,
     setMenuMusic,
     selectedMusic,
@@ -60,54 +59,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         );
       setMenuMusic(newMenuMusic);
     }
-  }
-
-  function reloadPlugin() {
-    dummyFuncTest();
-    python.resolve(python.reloadPacksDir(), () => {
-      python.resolve(python.getSoundPacks(), (data: any) => {
-        setSoundPacks(data);
-      });
-    });
-
-    python.resolve(python.getConfig(), (data: any) => {
-      // This just has fallbacks incase the fetch fails or the config is improperly formatted
-      setActiveSound(data?.selected_pack || "Default");
-      setSelectedMusic(data?.selected_music || "None");
-    });
-
-    restartMusicPlayer(selectedMusic);
-
-    unpatch(
-      AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
-      "PlayAudioURL"
-    );
-
-    beforePatch(
-      AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
-      "PlayAudioURL",
-      (args) => {
-        let newSoundURL: string = "";
-        switch (activeSound) {
-          case "Default":
-            newSoundURL = args[0];
-            break;
-          default:
-            const currentPack = soundPacks.find((e) => e.name === activeSound);
-            if (currentPack?.ignore.includes(args[0].slice(8))) {
-              newSoundURL = args[0];
-              break;
-            }
-            newSoundURL = args[0].replace(
-              "sounds/",
-              `sounds_custom/${currentPack?.path || "/error"}/`
-            );
-            break;
-        }
-        args[0] = newSoundURL;
-        return [newSoundURL];
-      }
-    );
   }
 
   const SoundPackDropdownOptions = useMemo(() => {
@@ -206,15 +157,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             }}
           >
             Manage Packs
-          </ButtonItem>
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ButtonItem
-            bottomSeparator={true}
-            layout="below"
-            onClick={() => reloadPlugin()}
-          >
-            Reload Plugin
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
