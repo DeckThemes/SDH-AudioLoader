@@ -65,7 +65,9 @@ export const PackBrowserPage: VFC = () => {
         // This checks for the theme name
         !e.name.toLowerCase().includes(searchFieldValue.toLowerCase()) &&
         // This checks for the author name
-        !e.author.toLowerCase().includes(searchFieldValue.toLowerCase())
+        !e.author.toLowerCase().includes(searchFieldValue.toLowerCase()) &&
+        // This checks for the description
+        !e.description.toLowerCase().includes(searchFieldValue.toLowerCase())
       ) {
         // return false just means it won't show in the list
         return false;
