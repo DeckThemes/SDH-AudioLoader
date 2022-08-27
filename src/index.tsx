@@ -45,7 +45,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   }, []);
 
   function restartMusicPlayer(newMusic: string) {
-    console.log(menuMusic, newMusic);
     if (menuMusic !== null) {
       menuMusic.StopPlayback();
       setMenuMusic(null);

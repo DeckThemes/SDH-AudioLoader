@@ -30,12 +30,15 @@ export const PackBrowserPage: VFC = () => {
   } = useGlobalState();
 
   async function fetchPackDb() {
-    const response = await python.fetchPackDb();
-    if (response.success) {
-      setBrowserPackList(JSON.parse(response.result.body));
-    } else {
-      console.log("AudioLoader - Fetching PackDb Failed");
-    }
+    python.resolve(python.fetchPackDb(), (response: any) => {
+      if (response.body) {
+        setBrowserPackList(JSON.parse(response.body));
+      } else {
+        console.log(
+          "AudioLoader - Fetching PackDb Failed, no json string was returned by the fetch"
+        );
+      }
+    });
   }
 
   function fetchLocalPacks() {
