@@ -25,6 +25,7 @@ import {
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
     activeSound,
+    gamesRunning,
     setActiveSound,
     soundPacks,
     setSoundPacks,
@@ -49,7 +50,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       menuMusic.StopPlayback();
       setMenuMusic(null);
     }
-    if (newMusic !== "None") {
+    // This makes sure if you are in a game, music doesn't start playing
+    if (newMusic !== "None" && gamesRunning.length === 0) {
       const currentPack = soundPacks.find((e) => e.name === newMusic);
       const newMenuMusic =
         AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
@@ -246,7 +248,6 @@ export default definePlugin((serverApi: ServerAPI) => {
 
   const state: GlobalState = new GlobalState();
   let menuMusic: any = null;
-  let gamesRunning: Number[] = [];
 
   beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
@@ -308,19 +309,23 @@ export default definePlugin((serverApi: ServerAPI) => {
     // Refer to the SteamClient.d.ts or just console.log(SteamClient) to see all of it's methods
     SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
       (update: AppState) => {
-        const { soundPacks, menuMusic, selectedMusic } = state.getPublicState();
+        const { soundPacks, menuMusic, selectedMusic, gamesRunning } =
+          state.getPublicState();
         if (selectedMusic !== "None") {
           if (update.bRunning) {
-            gamesRunning.push(update.unAppID);
+            // Because gamesRunning is in globalState, array methods like push and splice don't work
+            state.setGamesRunning([...gamesRunning, update.unAppID]);
             if (menuMusic != null) {
               menuMusic.StopPlayback();
               state.setMenuMusic(null);
             }
           } else {
-            for (let i = gamesRunning.length; i >= 0; i--) {
-              if (gamesRunning[i] === update.unAppID) gamesRunning.splice(i, 1);
-            }
-            if (gamesRunning.length === 0) {
+            state.setGamesRunning(
+              gamesRunning.filter((e) => e !== update.unAppID)
+            );
+
+            // I'm re-using the filter here because I don't believe the getPublicState() method will update the values if they are changed
+            if (gamesRunning.filter((e) => e !== update.unAppID).length === 0) {
               const currentMusic = soundPacks.find(
                 (e) => e.name === selectedMusic
               );
@@ -331,7 +336,7 @@ export default definePlugin((serverApi: ServerAPI) => {
                   }/menu_music.mp3`,
                   999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
                 );
-              // You need to update menuMusic in globalState after every change so that it reflects the changes the next time it checks
+              // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
               state.setMenuMusic(newMenuMusic);
             }
           }

@@ -4,6 +4,7 @@ import { Pack, packDbEntry } from "../classes";
 
 interface PublicGlobalState {
   menuMusic: any;
+  gamesRunning: Number[];
   activeSound: string;
   soundPacks: Pack[];
   selectedMusic: string;
@@ -18,6 +19,7 @@ interface PublicGlobalState {
 
 interface PublicGlobalStateContext extends PublicGlobalState {
   setMenuMusic(value: any): void;
+  setGamesRunning(gameArr: Number[]): void;
   setActiveSound(value: string): void;
   setSoundPacks(packArr: Pack[]): void;
   setSelectedMusic(value: string): void;
@@ -31,6 +33,7 @@ interface PublicGlobalStateContext extends PublicGlobalState {
 // This class creates the getter and setter functions for all of the global state data.
 export class GlobalState {
   private menuMusic: any = null;
+  private gamesRunning: Number[] = [];
   private activeSound: string = "Default";
   private soundPacks: Pack[] = [];
   private selectedMusic: string = "None";
@@ -49,6 +52,7 @@ export class GlobalState {
   getPublicState() {
     return {
       menuMusic: this.menuMusic,
+      gamesRunning: this.gamesRunning,
       activeSound: this.activeSound,
       soundPacks: this.soundPacks,
       selectedMusic: this.selectedMusic,
@@ -62,6 +66,11 @@ export class GlobalState {
 
   setMenuMusic(value: any) {
     this.menuMusic = value;
+    this.forceUpdate();
+  }
+
+  setGamesRunning(gameArr: Number[]) {
+    this.gamesRunning = gameArr;
     this.forceUpdate();
   }
 
@@ -147,6 +156,8 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
   }, []);
 
   const setMenuMusic = (value: any) => globalStateClass.setMenuMusic(value);
+  const setGamesRunning = (gameArr: Number[]) =>
+    globalStateClass.setGamesRunning(gameArr);
   const setActiveSound = (value: string) =>
     globalStateClass.setActiveSound(value);
   const setSoundPacks = (packArr: Pack[]) =>
@@ -167,6 +178,7 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
       value={{
         ...publicState,
         setMenuMusic,
+        setGamesRunning,
         setActiveSound,
         setSoundPacks,
         setSelectedMusic,
