@@ -30,12 +30,15 @@ export const PackBrowserPage: VFC = () => {
   } = useGlobalState();
 
   async function fetchPackDb() {
-    const response = await python.fetchPackDb();
-    if (response.success) {
-      setBrowserPackList(JSON.parse(response.result.body));
-    } else {
-      console.log("AudioLoader - Fetching PackDb Failed");
-    }
+    python.resolve(python.fetchPackDb(), (response: any) => {
+      if (response.body) {
+        setBrowserPackList(JSON.parse(response.body));
+      } else {
+        console.log(
+          "AudioLoader - Fetching PackDb Failed, no json string was returned by the fetch"
+        );
+      }
+    });
   }
 
   function fetchLocalPacks() {
@@ -62,7 +65,9 @@ export const PackBrowserPage: VFC = () => {
         // This checks for the theme name
         !e.name.toLowerCase().includes(searchFieldValue.toLowerCase()) &&
         // This checks for the author name
-        !e.author.toLowerCase().includes(searchFieldValue.toLowerCase())
+        !e.author.toLowerCase().includes(searchFieldValue.toLowerCase()) &&
+        // This checks for the description
+        !e.description.toLowerCase().includes(searchFieldValue.toLowerCase())
       ) {
         // return false just means it won't show in the list
         return false;
@@ -320,7 +325,9 @@ export const PackBrowserPage: VFC = () => {
                           e.description
                         ) : (
                           <span>
-                            <i>No Description Provided</i>
+                            <i style={{ color: "#666" }}>
+                              No description provided.
+                            </i>
                           </span>
                         )}
                       </span>

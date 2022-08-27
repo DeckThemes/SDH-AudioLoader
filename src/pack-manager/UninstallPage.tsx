@@ -12,8 +12,10 @@ export const UninstallPage: VFC = () => {
     setSoundPacks,
     activeSound,
     setActiveSound,
-    musicEnabled,
-    musicLibraryOnly,
+    selectedMusic,
+    setSelectedMusic,
+    menuMusic,
+    setMenuMusic,
   } = useGlobalState();
 
   const [isUninstalling, setUninstalling] = useState(false);
@@ -30,15 +32,26 @@ export const UninstallPage: VFC = () => {
     setUninstalling(true);
     python.resolve(python.deletePack(listEntry.data.name), () => {
       fetchLocalPacks();
-      if (activeSound === listEntry.data.name) {
+      if (
+        activeSound === listEntry.data.name ||
+        selectedMusic === listEntry.data.name
+      ) {
         console.log(
-          "Audio Loader - Attempted to uninstall applied sound, changing applied sound to Default"
+          "Audio Loader - Attempted to uninstall applied sound/music, changing applied packs to Default"
         );
-        setActiveSound("Default");
+        if (activeSound === listEntry.data.name) setActiveSound("Default");
+        if (selectedMusic === listEntry.data.name) {
+          setSelectedMusic("None");
+          if (menuMusic !== null) {
+            menuMusic.StopPlayback();
+            setMenuMusic(null);
+          }
+        }
         const configObj = {
-          music_enabled: musicEnabled,
-          music_library_only: musicLibraryOnly,
-          selected_pack: "Default",
+          selected_pack:
+            activeSound === listEntry.data.name ? "Default" : activeSound,
+          selected_music:
+            selectedMusic === listEntry.data.name ? "None" : activeSound,
         };
         python.setConfig(configObj);
       }
@@ -49,9 +62,7 @@ export const UninstallPage: VFC = () => {
   if (soundPacks.length === 0) {
     return (
       <PanelSectionRow>
-        <span>
-          No custom themes installed, find some in the 'Browse Themes' tab.
-        </span>
+        <span>No packs installed, find some in the 'Browse Packs' tab.</span>
       </PanelSectionRow>
     );
   }

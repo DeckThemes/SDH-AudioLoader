@@ -4,9 +4,8 @@ import os
 from logging import getLogger
 
 starter_config_data = {
-  "music_enabled": False,
-  "music_library_only": False,
-  "selected_pack": "Default" 
+  "selected_pack": "Default",
+  "selected_music": "None"
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -220,9 +219,8 @@ class Plugin:
                 packData = Pack(packPath, pack)
 
                 if (packData.name not in [p.name for p in self.soundPacks]):
-                    if (packData.music == False):
-                        self.soundPacks.append(packData)
-                        Log("Audio Loader - Sound pack {} added".format(packData.name))
+                    self.soundPacks.append(packData)
+                    Log("Audio Loader - Sound pack {} added".format(packData.name))
             except Exception as e:
                 Log("Audio Loader - Error parsing sound pack: {}".format(e))
 
@@ -254,9 +252,8 @@ class Plugin:
     async def _main(self):
         self.soundPacks = []
         self.config = {
-            "music_enabled": False,
-            "music_library_only": False,
-            "selected_pack": "Default" 
+            "selected_pack": "Default", 
+            "selected_music": "None"
         }
 
         self.remote = RemoteInstall(self)

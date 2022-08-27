@@ -3,10 +3,11 @@ import { createContext, FC, useContext, useEffect, useState } from "react";
 import { Pack, packDbEntry } from "../classes";
 
 interface PublicGlobalState {
+  menuMusic: any;
+  gamesRunning: Number[];
   activeSound: string;
   soundPacks: Pack[];
-  musicEnabled: boolean;
-  musicLibraryOnly: boolean;
+  selectedMusic: string;
   browserPackList: packDbEntry[];
   searchFieldValue: string;
   selectedSort: number;
@@ -17,10 +18,11 @@ interface PublicGlobalState {
 // The localThemeEntry interface refers to the theme data as given by the python function, the Theme class refers to a theme after it has been formatted and the generate function has been added
 
 interface PublicGlobalStateContext extends PublicGlobalState {
+  setMenuMusic(value: any): void;
+  setGamesRunning(gameArr: Number[]): void;
   setActiveSound(value: string): void;
   setSoundPacks(packArr: Pack[]): void;
-  setMusicEnabled(value: boolean): void;
-  setMusicLibraryOnly(value: boolean): void;
+  setSelectedMusic(value: string): void;
   setBrowserPackList(packArr: packDbEntry[]): void;
   setSearchValue(value: string): void;
   setSort(value: number): void;
@@ -30,10 +32,11 @@ interface PublicGlobalStateContext extends PublicGlobalState {
 
 // This class creates the getter and setter functions for all of the global state data.
 export class GlobalState {
+  private menuMusic: any = null;
+  private gamesRunning: Number[] = [];
   private activeSound: string = "Default";
   private soundPacks: Pack[] = [];
-  private musicEnabled: boolean = false;
-  private musicLibraryOnly: boolean = false;
+  private selectedMusic: string = "None";
   private browserPackList: packDbEntry[] = [];
   private searchFieldValue: string = "";
   private selectedSort: number = 3;
@@ -48,16 +51,27 @@ export class GlobalState {
 
   getPublicState() {
     return {
+      menuMusic: this.menuMusic,
+      gamesRunning: this.gamesRunning,
       activeSound: this.activeSound,
       soundPacks: this.soundPacks,
-      musicEnabled: this.musicEnabled,
-      musicLibraryOnly: this.musicLibraryOnly,
+      selectedMusic: this.selectedMusic,
       browserPackList: this.browserPackList,
       searchFieldValue: this.searchFieldValue,
       selectedSort: this.selectedSort,
       selectedTarget: this.selectedTarget,
       isInstalling: this.isInstalling,
     };
+  }
+
+  setMenuMusic(value: any) {
+    this.menuMusic = value;
+    this.forceUpdate();
+  }
+
+  setGamesRunning(gameArr: Number[]) {
+    this.gamesRunning = gameArr;
+    this.forceUpdate();
   }
 
   setActiveSound(value: string) {
@@ -79,13 +93,8 @@ export class GlobalState {
     this.forceUpdate();
   }
 
-  setMusicEnabled(value: boolean) {
-    this.musicEnabled = value;
-    this.forceUpdate();
-  }
-
-  setMusicLibraryOnly(value: boolean) {
-    this.musicLibraryOnly = value;
+  setSelectedMusic(value: string) {
+    this.selectedMusic = value;
     this.forceUpdate();
   }
 
@@ -146,14 +155,15 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
       globalStateClass.eventBus.removeEventListener("stateUpdate", onUpdate);
   }, []);
 
+  const setMenuMusic = (value: any) => globalStateClass.setMenuMusic(value);
+  const setGamesRunning = (gameArr: Number[]) =>
+    globalStateClass.setGamesRunning(gameArr);
   const setActiveSound = (value: string) =>
     globalStateClass.setActiveSound(value);
   const setSoundPacks = (packArr: Pack[]) =>
     globalStateClass.setSoundPacks(packArr);
-  const setMusicEnabled = (value: boolean) =>
-    globalStateClass.setMusicEnabled(value);
-  const setMusicLibraryOnly = (value: boolean) =>
-    globalStateClass.setMusicLibraryOnly(value);
+  const setSelectedMusic = (value: string) =>
+    globalStateClass.setSelectedMusic(value);
   const setBrowserPackList = (packArr: packDbEntry[]) =>
     globalStateClass.setBrowserPackList(packArr);
   const setSearchValue = (value: string) =>
@@ -167,10 +177,11 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
     <GlobalStateContext.Provider
       value={{
         ...publicState,
+        setMenuMusic,
+        setGamesRunning,
         setActiveSound,
         setSoundPacks,
-        setMusicEnabled,
-        setMusicLibraryOnly,
+        setSelectedMusic,
         setBrowserPackList,
         setSearchValue,
         setSort,

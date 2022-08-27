@@ -9,7 +9,6 @@ import {
   Router,
   beforePatch,
   unpatch,
-  ToggleField,
   SidebarNavigation,
 } from "decky-frontend-lib";
 import { VFC, useMemo, useEffect, useState } from "react";
@@ -26,13 +25,13 @@ import {
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
     activeSound,
+    gamesRunning,
     setActiveSound,
     soundPacks,
-    setSoundPacks,
-    musicEnabled,
-    setMusicEnabled,
-    musicLibraryOnly,
-    setMusicLibraryOnly,
+    menuMusic,
+    setMenuMusic,
+    selectedMusic,
+    setSelectedMusic,
   } = useGlobalState();
 
   const [dummyFuncResult, setDummyResult] = useState<boolean>(false);
@@ -45,57 +44,41 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     dummyFuncTest();
   }, []);
 
-  function reloadPlugin() {
-    dummyFuncTest();
-    python.resolve(python.reloadPacksDir(), () => {
-      python.resolve(python.getSoundPacks(), (data: any) => {
-        setSoundPacks(data);
-      });
-    });
-
-    python.resolve(python.getConfig(), (data: any) => {
-      // This just has fallbacks incase the fetch fails or the config is improperly formatted
-      setActiveSound(data?.selected_pack || "Default");
-      setMusicEnabled(data?.music_enabled || false);
-      setMusicLibraryOnly(data?.music_library_only || false);
-    });
-
-    unpatch(
-      AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
-      "PlayAudioURL"
-    );
-
-    beforePatch(
-      AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
-      "PlayAudioURL",
-      (args) => {
-        let newSoundURL: string = "";
-        switch (activeSound) {
-          case "Default":
-            newSoundURL = args[0];
-            break;
-          default:
-            const currentPack = soundPacks.find((e) => e.name === activeSound);
-            if (currentPack?.ignore.includes(args[0].slice(8))) {
-              newSoundURL = args[0];
-              break;
-            }
-            newSoundURL = args[0].replace(
-              "sounds/",
-              `sounds_custom/${currentPack?.path || "/error"}/`
-            );
-            break;
-        }
-        args[0] = newSoundURL;
-        return [newSoundURL];
-      }
-    );
+  function restartMusicPlayer(newMusic: string) {
+    if (menuMusic !== null) {
+      menuMusic.StopPlayback();
+      setMenuMusic(null);
+    }
+    // This makes sure if you are in a game, music doesn't start playing
+    if (newMusic !== "None" && gamesRunning.length === 0) {
+      const currentPack = soundPacks.find((e) => e.name === newMusic);
+      const newMenuMusic =
+        AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
+          `/sounds_custom/${currentPack?.path || "/error"}/menu_music.mp3`,
+          999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
+        );
+      setMenuMusic(newMenuMusic);
+    }
   }
 
   const SoundPackDropdownOptions = useMemo(() => {
     return [
       { label: "Default", data: -1 },
       ...soundPacks
+        // Only shows sound packs
+        .filter((e) => !e.data.music)
+        .map((p, index) => ({ label: p.name, data: index }))
+        // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    ];
+  }, [soundPacks]);
+
+  const MusicPackDropdownOptions = useMemo(() => {
+    return [
+      { label: "None", data: -1 },
+      ...soundPacks
+        // Only show music packs
+        .filter((e) => e.data.music)
         .map((p, index) => ({ label: p.name, data: index }))
         // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
         .sort((a, b) => a.label.localeCompare(b.label)),
@@ -133,9 +116,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               setActiveSound(option.label);
 
               const configObj = {
-                music_enabled: musicEnabled,
-                music_library_only: musicLibraryOnly,
                 selected_pack: option.label,
+                selected_music: selectedMusic,
               };
               python.setConfig(configObj);
             }}
@@ -146,23 +128,25 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             bottomSeparator={false}
             label="Music"
             menuLabel="Music"
-            rgOptions={[{ label: "Coming Soon", data: 0 }]}
-            selectedOption={0}
-            disabled={true}
+            rgOptions={MusicPackDropdownOptions}
+            selectedOption={
+              MusicPackDropdownOptions.find((e) => e.label === selectedMusic)
+                ?.data ?? -1
+            }
+            onChange={async (option) => {
+              setSelectedMusic(option.label);
+
+              const configObj = {
+                selected_pack: activeSound,
+                selected_music: option.label,
+              };
+              python.setConfig(configObj);
+              restartMusicPlayer(option.label);
+            }}
           />
         </PanelSectionRow>
       </PanelSection>
       <PanelSection title="Settings">
-        <PanelSectionRow>
-          <ToggleField
-            bottomSeparator={false}
-            checked={false}
-            label={"Limit Music to Library"}
-            disabled={true}
-          />
-        </PanelSectionRow>
-      </PanelSection>
-      <PanelSection title="Management">
         <PanelSectionRow>
           <ButtonItem
             bottomSeparator={false}
@@ -173,15 +157,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             }}
           >
             Manage Packs
-          </ButtonItem>
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ButtonItem
-            bottomSeparator={true}
-            layout="below"
-            onClick={() => reloadPlugin()}
-          >
-            Reload Plugin
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
@@ -214,6 +189,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   python.setServer(serverApi);
 
   const state: GlobalState = new GlobalState();
+  let menuMusic: any = null;
 
   beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
@@ -244,16 +220,71 @@ export default definePlugin((serverApi: ServerAPI) => {
     }
   );
 
-  // For some reason when I didn't make these arrow functions they gave me "can't set property of undefined errors", so just leave them as arrow functions
-  python.resolve(python.getSoundPacks(), (data: any) => {
-    state.setSoundPacks(data);
+  python.resolve(python.getSoundPacks(), (packs: any) => {
+    state.setSoundPacks(packs);
+    // This is nested in here so that all data has loaded before it attempts to find audio paths
+    python.resolve(python.getConfig(), (data: any) => {
+      // This sets the config data in globalState
+      state.setActiveSound(data?.selected_pack || "Default");
+      const configSelectedMusic = data?.selected_music || "None";
+      state.setSelectedMusic(configSelectedMusic);
+
+      // Plays menu music initially
+      // TODO: Add check if game is currently running
+      if (configSelectedMusic !== "None") {
+        const { soundPacks } = state.getPublicState();
+        const currentPack = soundPacks.find(
+          (e) => e.name === configSelectedMusic
+        );
+        menuMusic =
+          AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
+            `/sounds_custom/${currentPack?.path || "/error"}/menu_music.mp3`,
+            999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
+          );
+        state.setMenuMusic(menuMusic);
+      }
+    });
   });
-  python.resolve(python.getConfig(), (data: any) => {
-    // This just has fallbacks incase the fetch fails or the config is improperly formatted
-    state.setActiveSound(data?.selected_pack || "Default");
-    state.setMusicEnabled(data?.music_enabled || false);
-    state.setMusicLibraryOnly(data?.music_library_only || false);
-  });
+
+  const AppStateRegistrar =
+    // SteamClient is something exposed by the SP tab of SteamUI, it's not a decky-frontend-lib thingy, but you can still call it normally
+    // Refer to the SteamClient.d.ts or just console.log(SteamClient) to see all of it's methods
+    SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
+      (update: AppState) => {
+        const { soundPacks, menuMusic, selectedMusic, gamesRunning } =
+          state.getPublicState();
+        if (selectedMusic !== "None") {
+          if (update.bRunning) {
+            // Because gamesRunning is in globalState, array methods like push and splice don't work
+            state.setGamesRunning([...gamesRunning, update.unAppID]);
+            if (menuMusic != null) {
+              menuMusic.StopPlayback();
+              state.setMenuMusic(null);
+            }
+          } else {
+            state.setGamesRunning(
+              gamesRunning.filter((e) => e !== update.unAppID)
+            );
+
+            // I'm re-using the filter here because I don't believe the getPublicState() method will update the values if they are changed
+            if (gamesRunning.filter((e) => e !== update.unAppID).length === 0) {
+              const currentMusic = soundPacks.find(
+                (e) => e.name === selectedMusic
+              );
+              const newMenuMusic =
+                AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
+                  `/sounds_custom/${
+                    currentMusic?.path || "/error"
+                  }/menu_music.mp3`,
+                  999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
+                );
+              // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
+              state.setMenuMusic(newMenuMusic);
+            }
+          }
+        }
+      }
+    );
 
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
     <GlobalStateContextProvider globalStateClass={state}>
@@ -270,10 +301,16 @@ export default definePlugin((serverApi: ServerAPI) => {
     ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
+      if (menuMusic != null) {
+        menuMusic.StopPlayback();
+        menuMusic = null;
+      }
+
       unpatch(
         AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
         "PlayAudioURL"
       );
+      AppStateRegistrar.unregister();
     },
   };
 });
