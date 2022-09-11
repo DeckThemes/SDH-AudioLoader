@@ -1,7 +1,7 @@
 {
   "name": "Audio Loader",
-  "author": "EMERALD0874, beebls",
-  "flags": ["debug", "_root"],
+  "author": "EMERALD0874 & Beebles",
+  "flags": ["_root"],
   "publish": {
     "tags": ["style", "media", "music"],
     "description": "Replaces Steam UI sound effects with custom sounds and adds music to menus.",
