@@ -301,9 +301,10 @@ export default definePlugin((serverApi: ServerAPI) => {
     ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
+      const { menuMusic } = state.getPublicState();
       if (menuMusic != null) {
         menuMusic.StopPlayback();
-        menuMusic = null;
+        state.setMenuMusic(null);
       }
 
       unpatch(
