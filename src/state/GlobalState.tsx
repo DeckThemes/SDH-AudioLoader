@@ -4,6 +4,7 @@ import { Pack, packDbEntry } from "../classes";
 
 interface PublicGlobalState {
   menuMusic: any;
+  musicPatchInstance: any;
   gamesRunning: Number[];
   activeSound: string;
   soundPacks: Pack[];
@@ -19,6 +20,7 @@ interface PublicGlobalState {
 
 interface PublicGlobalStateContext extends PublicGlobalState {
   setMenuMusic(value: any): void;
+  setMusicPatchInstance(value: any): void;
   setGamesRunning(gameArr: Number[]): void;
   setActiveSound(value: string): void;
   setSoundPacks(packArr: Pack[]): void;
@@ -33,6 +35,7 @@ interface PublicGlobalStateContext extends PublicGlobalState {
 // This class creates the getter and setter functions for all of the global state data.
 export class GlobalState {
   private menuMusic: any = null;
+  private musicPatchInstance: any = null;
   private gamesRunning: Number[] = [];
   private activeSound: string = "Default";
   private soundPacks: Pack[] = [];
@@ -52,6 +55,7 @@ export class GlobalState {
   getPublicState() {
     return {
       menuMusic: this.menuMusic,
+      musicPatchInstance: this.musicPatchInstance,
       gamesRunning: this.gamesRunning,
       activeSound: this.activeSound,
       soundPacks: this.soundPacks,
@@ -66,6 +70,11 @@ export class GlobalState {
 
   setMenuMusic(value: any) {
     this.menuMusic = value;
+    this.forceUpdate();
+  }
+
+  setMusicPatchInstance(value: any) {
+    this.musicPatchInstance = value;
     this.forceUpdate();
   }
 
@@ -156,6 +165,8 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
   }, []);
 
   const setMenuMusic = (value: any) => globalStateClass.setMenuMusic(value);
+  const setMusicPatchInstance = (value: any) =>
+    globalStateClass.setMusicPatchInstance(value);
   const setGamesRunning = (gameArr: Number[]) =>
     globalStateClass.setGamesRunning(gameArr);
   const setActiveSound = (value: string) =>
@@ -178,6 +189,7 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
       value={{
         ...publicState,
         setMenuMusic,
+        setMusicPatchInstance,
         setGamesRunning,
         setActiveSound,
         setSoundPacks,

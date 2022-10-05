@@ -8,7 +8,6 @@ import {
   DropdownItem,
   Router,
   beforePatch,
-  unpatch,
   SidebarNavigation,
 } from "decky-frontend-lib";
 import { VFC, useMemo, useEffect, useState } from "react";
@@ -101,7 +100,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       <PanelSection title="Packs">
         <PanelSectionRow>
           <DropdownItem
-            bottomSeparator={true}
+            bottomSeparator="standard"
             label="Sounds"
             menuLabel="Sounds"
             rgOptions={SoundPackDropdownOptions}
@@ -113,7 +112,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 ?.data ?? -1
             }
             onChange={async (option) => {
-              setActiveSound(option.label);
+              setActiveSound(option.label as string);
 
               const configObj = {
                 selected_pack: option.label,
@@ -125,7 +124,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         </PanelSectionRow>
         <PanelSectionRow>
           <DropdownItem
-            bottomSeparator={false}
+            bottomSeparator="none"
             label="Music"
             menuLabel="Music"
             rgOptions={MusicPackDropdownOptions}
@@ -134,14 +133,14 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 ?.data ?? -1
             }
             onChange={async (option) => {
-              setSelectedMusic(option.label);
+              setSelectedMusic(option.label as string);
 
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: option.label,
               };
               python.setConfig(configObj);
-              restartMusicPlayer(option.label);
+              restartMusicPlayer(option.label as string);
             }}
           />
         </PanelSectionRow>
@@ -149,7 +148,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       <PanelSection title="Settings">
         <PanelSectionRow>
           <ButtonItem
-            bottomSeparator={false}
+            bottomSeparator="none"
             layout="below"
             onClick={() => {
               Router.CloseSideMenus();
@@ -191,7 +190,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   const state: GlobalState = new GlobalState();
   let menuMusic: any = null;
 
-  beforePatch(
+  const patchInstance = beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
     "PlayAudioURL",
     (args) => {
@@ -219,6 +218,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       return [newSoundURL];
     }
   );
+  state.setMusicPatchInstance(patchInstance);
 
   python.resolve(python.getSoundPacks(), (packs: any) => {
     state.setSoundPacks(packs);
@@ -301,16 +301,12 @@ export default definePlugin((serverApi: ServerAPI) => {
     ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
-      const { menuMusic } = state.getPublicState();
+      const { menuMusic, musicPatchInstance } = state.getPublicState();
       if (menuMusic != null) {
         menuMusic.StopPlayback();
         state.setMenuMusic(null);
       }
-
-      unpatch(
-        AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
-        "PlayAudioURL"
-      );
+      musicPatchInstance.unpatch();
       AppStateRegistrar.unregister();
     },
   };

@@ -351,7 +351,7 @@ export const PackBrowserPage: VFC = () => {
                             }}
                           >
                             <ButtonItem
-                              bottomSeparator={false}
+                              bottomSeparator="none"
                               layout="below"
                               disabled={
                                 isInstalling || installStatus === "installed"
