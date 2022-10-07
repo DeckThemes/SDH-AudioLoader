@@ -4,7 +4,7 @@ import { Pack, packDbEntry } from "../classes";
 
 interface PublicGlobalState {
   menuMusic: any;
-  musicPatchInstance: any;
+  soundPatchInstance: any;
   gamesRunning: Number[];
   activeSound: string;
   soundPacks: Pack[];
@@ -20,7 +20,7 @@ interface PublicGlobalState {
 
 interface PublicGlobalStateContext extends PublicGlobalState {
   setMenuMusic(value: any): void;
-  setMusicPatchInstance(value: any): void;
+  setSoundPatchInstance(value: any): void;
   setGamesRunning(gameArr: Number[]): void;
   setActiveSound(value: string): void;
   setSoundPacks(packArr: Pack[]): void;
@@ -35,7 +35,7 @@ interface PublicGlobalStateContext extends PublicGlobalState {
 // This class creates the getter and setter functions for all of the global state data.
 export class GlobalState {
   private menuMusic: any = null;
-  private musicPatchInstance: any = null;
+  private soundPatchInstance: any = null;
   private gamesRunning: Number[] = [];
   private activeSound: string = "Default";
   private soundPacks: Pack[] = [];
@@ -55,7 +55,7 @@ export class GlobalState {
   getPublicState() {
     return {
       menuMusic: this.menuMusic,
-      musicPatchInstance: this.musicPatchInstance,
+      soundPatchInstance: this.soundPatchInstance,
       gamesRunning: this.gamesRunning,
       activeSound: this.activeSound,
       soundPacks: this.soundPacks,
@@ -73,8 +73,8 @@ export class GlobalState {
     this.forceUpdate();
   }
 
-  setMusicPatchInstance(value: any) {
-    this.musicPatchInstance = value;
+  setSoundPatchInstance(value: any) {
+    this.soundPatchInstance = value;
     this.forceUpdate();
   }
 
@@ -165,8 +165,8 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
   }, []);
 
   const setMenuMusic = (value: any) => globalStateClass.setMenuMusic(value);
-  const setMusicPatchInstance = (value: any) =>
-    globalStateClass.setMusicPatchInstance(value);
+  const setSoundPatchInstance = (value: any) =>
+    globalStateClass.setSoundPatchInstance(value);
   const setGamesRunning = (gameArr: Number[]) =>
     globalStateClass.setGamesRunning(gameArr);
   const setActiveSound = (value: string) =>
@@ -189,7 +189,7 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
       value={{
         ...publicState,
         setMenuMusic,
-        setMusicPatchInstance,
+        setSoundPatchInstance,
         setGamesRunning,
         setActiveSound,
         setSoundPacks,
