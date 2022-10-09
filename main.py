@@ -120,7 +120,7 @@ class Pack:
         self.author = json["author"] if ("author" in json) else "Unknown"
         self.require = int(json["manifest_version"]) if ("manifest_version" in json) else 1
         self.ignore = json["ignore"] if ("ignore" in json) else []
-        self.mappings = json["mappings"] if ("mappings" in json) else []
+        self.mappings = json["mappings"] if ("mappings" in json) else {}
         self.music = bool(json["music"]) if ("music" in json) else False
 
         if (AUDIO_LOADER_VERSION < self.require):
