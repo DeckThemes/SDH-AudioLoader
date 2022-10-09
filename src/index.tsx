@@ -85,11 +85,26 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             newSoundURL = args[0];
             break;
           default:
+            const soundName = args[0].slice(8);
             const currentPack = soundPacks.find((e) => e.name === activeSound);
+            // Ignore check
             if (currentPack?.ignore.includes(args[0].slice(8))) {
               newSoundURL = args[0];
               break;
             }
+            // Mapping check
+            if (Object.keys(currentPack?.mappings || {}).includes(soundName)) {
+              const randIndex = Math.trunc(
+                Math.random() * currentPack?.mappings[soundName].length
+              );
+              const mappedFileName =
+                currentPack?.mappings[soundName][randIndex];
+              newSoundURL = `/sounds_custom/${
+                currentPack?.path || "/error"
+              }/${mappedFileName}`;
+              break;
+            }
+            // Default path-replacing behavior
             newSoundURL = args[0].replace(
               "sounds/",
               `sounds_custom/${currentPack?.path || "/error"}/`
@@ -244,6 +259,8 @@ export default definePlugin((serverApi: ServerAPI) => {
   const state: GlobalState = new GlobalState();
   let menuMusic: any = null;
 
+  // The sound effect intercept/player
+  // Needs to be stored in globalstate in order to unpatch
   const patchInstance = beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
     "PlayAudioURL",
@@ -257,11 +274,25 @@ export default definePlugin((serverApi: ServerAPI) => {
           newSoundURL = args[0];
           break;
         default:
+          const soundName = args[0].slice(8);
           const currentPack = soundPacks.find((e) => e.name === activeSound);
-          if (currentPack?.ignore.includes(args[0].slice(8))) {
+          // Ignore check
+          if (currentPack?.ignore.includes(soundName)) {
             newSoundURL = args[0];
             break;
           }
+          // Mapping check
+          if (Object.keys(currentPack?.mappings || {}).includes(soundName)) {
+            const randIndex = Math.trunc(
+              Math.random() * currentPack?.mappings[soundName].length
+            );
+            const mappedFileName = currentPack?.mappings[soundName][randIndex];
+            newSoundURL = `/sounds_custom/${
+              currentPack?.path || "/error"
+            }/${mappedFileName}`;
+            break;
+          }
+          // Default path-replacing behavior
           newSoundURL = args[0].replace(
             "sounds/",
             `sounds_custom/${currentPack?.path || "/error"}/`

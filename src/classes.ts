@@ -4,6 +4,7 @@ export class Pack {
   description: string = "";
   path: string = "";
   ignore: string[] = [];
+  mappings: object = {};
   version: string = "v1.0";
   author: string = "";
 
@@ -13,6 +14,7 @@ export class Pack {
     this.description = this.data.description;
     this.path = this.data.packPath.split("/").pop();
     this.ignore = this.data.ignore;
+    this.mappings = this.data.mappings;
     this.version = this.data.version;
     this.author = this.data.author;
   }

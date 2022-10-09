@@ -6,7 +6,7 @@ import {
   Focusable,
   ButtonItem,
 } from "decky-frontend-lib";
-import { useEffect, VFC, useMemo, useRef } from "react";
+import { useLayoutEffect, VFC, useMemo, useRef } from "react";
 import { Pack, packDbEntry } from "../classes";
 import * as python from "../python";
 import { useGlobalState } from "../state/GlobalState";
@@ -53,7 +53,7 @@ export const PackBrowserPage: VFC = () => {
     fetchPackDb();
     fetchLocalPacks();
   }
-  useEffect(() => {
+  useLayoutEffect(() => {
     fetchPackDb();
   }, []);
 
