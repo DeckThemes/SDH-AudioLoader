@@ -6,7 +6,7 @@ import {
   Focusable,
   ButtonItem,
 } from "decky-frontend-lib";
-import { useLayoutEffect, VFC, useMemo, useRef } from "react";
+import { useLayoutEffect, VFC, useMemo, useRef, useState } from "react";
 import { Pack, packDbEntry } from "../classes";
 import * as python from "../python";
 import { useGlobalState } from "../state/GlobalState";
@@ -28,6 +28,12 @@ export const PackBrowserPage: VFC = () => {
     isInstalling,
     setInstalling,
   } = useGlobalState();
+
+  const [backendVersion, setBackendVer] = useState<number>(2);
+  function reloadBackendVer() {
+    python.resolve(python.getBackendVersion(), setBackendVer);
+    console.log(backendVersion);
+  }
 
   async function fetchPackDb() {
     python.resolve(python.fetchPackDb(), (response: any) => {
@@ -55,9 +61,14 @@ export const PackBrowserPage: VFC = () => {
   }
   useLayoutEffect(() => {
     fetchPackDb();
+    reloadBackendVer();
   }, []);
 
   const searchFilter = (e: packDbEntry) => {
+    // This means only compatible themes will show up, newer ones won't
+    if (e.manifest_version > backendVersion) {
+      return false;
+    }
     // This filter just implements the search stuff
     if (searchFieldValue.length > 0) {
       // Convert the theme and search to lowercase so that it's not case-sensitive

@@ -128,6 +128,9 @@ class Pack:
         
         self.packPath = packPath
 
+    async def get_loader_version(self) -> int:
+        return AUDIO_LOADER_VERSION
+
     async def delete(self) -> Result:
         try:
             shutil.rmtree(self.packPath)
