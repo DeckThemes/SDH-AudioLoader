@@ -53,7 +53,7 @@ class Result:
 
 class RemoteInstall:
     def __init__(self, plugin):
-        self.packDb = "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.1.0/packs.json"
+        self.packDb = "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.2.0/packs.json"
         self.plugin = plugin
         self.packs = []
     

@@ -32,7 +32,7 @@ export function setServer(s: ServerAPI) {
 
 export async function fetchPackDb(): Promise<any> {
   return server!.fetchNoCors(
-    "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.1.0/packs.json",
+    "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.2.0/packs.json",
     { method: "GET" }
   );
 }
