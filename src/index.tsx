@@ -27,10 +27,13 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     gamesRunning,
     setActiveSound,
     soundPacks,
+    setSoundPacks,
     menuMusic,
     setMenuMusic,
     selectedMusic,
     setSelectedMusic,
+    soundPatchInstance,
+    setSoundPatchInstance,
   } = useGlobalState();
 
   const [dummyFuncResult, setDummyResult] = useState<boolean>(false);
@@ -58,6 +61,62 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         );
       setMenuMusic(newMenuMusic);
     }
+  }
+
+  function fullReload() {
+    // Re-fetch locally installed packs
+    python.resolve(python.reloadPacksDir(), () => {
+      python.resolve(python.getSoundPacks(), (data: any) => {
+        setSoundPacks(data);
+      });
+    });
+
+    // Unpatch and re-patch the sound effect player
+    soundPatchInstance.unpatch();
+    const newPatchInstance = beforePatch(
+      AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
+      "PlayAudioURL",
+      (args) => {
+        // Since this isn't in a react component, this uses the getter function of the globalState instead of just the react variables
+        // It does the same thing
+        let newSoundURL: string = "";
+        switch (activeSound) {
+          case "Default":
+            newSoundURL = args[0];
+            break;
+          default:
+            const soundName = args[0].slice(8);
+            const currentPack = soundPacks.find((e) => e.name === activeSound);
+            // Ignore check
+            if (currentPack?.ignore.includes(args[0].slice(8))) {
+              newSoundURL = args[0];
+              break;
+            }
+            // Mapping check
+            if (Object.keys(currentPack?.mappings || {}).includes(soundName)) {
+              const randIndex = Math.trunc(
+                Math.random() * currentPack?.mappings[soundName].length
+              );
+              const mappedFileName =
+                currentPack?.mappings[soundName][randIndex];
+              newSoundURL = `/sounds_custom/${
+                currentPack?.path || "/error"
+              }/${mappedFileName}`;
+              break;
+            }
+            // Default path-replacing behavior
+            newSoundURL = args[0].replace(
+              "sounds/",
+              `sounds_custom/${currentPack?.path || "/error"}/`
+            );
+            break;
+        }
+        args[0] = newSoundURL;
+        return [newSoundURL];
+      }
+    );
+    setSoundPatchInstance(newPatchInstance);
+    restartMusicPlayer(selectedMusic);
   }
 
   const SoundPackDropdownOptions = useMemo(() => {
@@ -148,7 +207,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       <PanelSection title="Settings">
         <PanelSectionRow>
           <ButtonItem
-            bottomSeparator="none"
+            bottomSeparator="thick"
             layout="below"
             onClick={() => {
               Router.CloseSideMenus();
@@ -156,6 +215,16 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             }}
           >
             Manage Packs
+          </ButtonItem>
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={() => {
+              fullReload();
+            }}
+          >
+            Reload Plugin
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
@@ -190,6 +259,8 @@ export default definePlugin((serverApi: ServerAPI) => {
   const state: GlobalState = new GlobalState();
   let menuMusic: any = null;
 
+  // The sound effect intercept/player
+  // Needs to be stored in globalstate in order to unpatch
   const patchInstance = beforePatch(
     AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
     "PlayAudioURL",
@@ -203,11 +274,25 @@ export default definePlugin((serverApi: ServerAPI) => {
           newSoundURL = args[0];
           break;
         default:
+          const soundName = args[0].slice(8);
           const currentPack = soundPacks.find((e) => e.name === activeSound);
-          if (currentPack?.ignore.includes(args[0].slice(8))) {
+          // Ignore check
+          if (currentPack?.ignore.includes(soundName)) {
             newSoundURL = args[0];
             break;
           }
+          // Mapping check
+          if (Object.keys(currentPack?.mappings || {}).includes(soundName)) {
+            const randIndex = Math.trunc(
+              Math.random() * currentPack?.mappings[soundName].length
+            );
+            const mappedFileName = currentPack?.mappings[soundName][randIndex];
+            newSoundURL = `/sounds_custom/${
+              currentPack?.path || "/error"
+            }/${mappedFileName}`;
+            break;
+          }
+          // Default path-replacing behavior
           newSoundURL = args[0].replace(
             "sounds/",
             `sounds_custom/${currentPack?.path || "/error"}/`
@@ -218,7 +303,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       return [newSoundURL];
     }
   );
-  state.setMusicPatchInstance(patchInstance);
+  state.setSoundPatchInstance(patchInstance);
 
   python.resolve(python.getSoundPacks(), (packs: any) => {
     state.setSoundPacks(packs);
@@ -301,12 +386,12 @@ export default definePlugin((serverApi: ServerAPI) => {
     ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
-      const { menuMusic, musicPatchInstance } = state.getPublicState();
+      const { menuMusic, soundPatchInstance } = state.getPublicState();
       if (menuMusic != null) {
         menuMusic.StopPlayback();
         state.setMenuMusic(null);
       }
-      musicPatchInstance.unpatch();
+      soundPatchInstance.unpatch();
       AppStateRegistrar.unregister();
     },
   };

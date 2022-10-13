@@ -10,7 +10,7 @@ starter_config_data = {
 starter_config_string = json.dumps(starter_config_data)
 
 logger = getLogger("AUDIO_LOADER")
-AUDIO_LOADER_VERSION = 1
+AUDIO_LOADER_VERSION = 2
 
 def Log(text : str):
     logger.info(text)
@@ -53,7 +53,7 @@ class Result:
 
 class RemoteInstall:
     def __init__(self, plugin):
-        self.packDb = "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.1.0/packs.json"
+        self.packDb = "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.2.0/packs.json"
         self.plugin = plugin
         self.packs = []
     
@@ -120,12 +120,16 @@ class Pack:
         self.author = json["author"] if ("author" in json) else "Unknown"
         self.require = int(json["manifest_version"]) if ("manifest_version" in json) else 1
         self.ignore = json["ignore"] if ("ignore" in json) else []
+        self.mappings = json["mappings"] if ("mappings" in json) else {}
         self.music = bool(json["music"]) if ("music" in json) else False
 
         if (AUDIO_LOADER_VERSION < self.require):
             raise Exception("Audio Loader - {} requires Audio Loader version {} but only version {} is installed".format(self.name, self.require, AUDIO_LOADER_VERSION))
         
         self.packPath = packPath
+
+    async def get_loader_version(self) -> int:
+        return AUDIO_LOADER_VERSION
 
     async def delete(self) -> Result:
         try:
@@ -142,6 +146,7 @@ class Pack:
             "version": self.version,
             "author": self.author,
             "ignore": self.ignore,
+            "mappings": self.mappings,
             "music": self.music,
             "packPath": self.packPath
         }
