@@ -5,6 +5,9 @@ import { Pack, packDbEntry } from "../classes";
 interface PublicGlobalState {
   menuMusic: any;
   soundPatchInstance: any;
+  volumePatchInstance: any;
+  gainNode: any;
+  gainValue: any;
   gamesRunning: Number[];
   activeSound: string;
   soundPacks: Pack[];
@@ -21,7 +24,10 @@ interface PublicGlobalState {
 interface PublicGlobalStateContext extends PublicGlobalState {
   setMenuMusic(value: any): void;
   setSoundPatchInstance(value: any): void;
-  setGamesRunning(gameArr: Number[]): void;
+  setVolumePatchInstance(value: any): void;
+  setGainNode(value: any): void;
+  setGainValue(value: number): void;
+  setGamesRunning(value: Number[]): void;
   setActiveSound(value: string): void;
   setSoundPacks(packArr: Pack[]): void;
   setSelectedMusic(value: string): void;
@@ -36,6 +42,9 @@ interface PublicGlobalStateContext extends PublicGlobalState {
 export class GlobalState {
   private menuMusic: any = null;
   private soundPatchInstance: any = null;
+  private volumePatchInstance: any = null;
+  private gainNode: any = null;
+  private gainValue: number = 1;
   private gamesRunning: Number[] = [];
   private activeSound: string = "Default";
   private soundPacks: Pack[] = [];
@@ -56,6 +65,9 @@ export class GlobalState {
     return {
       menuMusic: this.menuMusic,
       soundPatchInstance: this.soundPatchInstance,
+      volumePatchInstance: this.volumePatchInstance,
+      gainNode: this.gainNode,
+      gainValue: this.gainValue,
       gamesRunning: this.gamesRunning,
       activeSound: this.activeSound,
       soundPacks: this.soundPacks,
@@ -75,6 +87,21 @@ export class GlobalState {
 
   setSoundPatchInstance(value: any) {
     this.soundPatchInstance = value;
+    this.forceUpdate();
+  }
+
+  setVolumePatchInstance(value: any) {
+    this.volumePatchInstance = value;
+    this.forceUpdate();
+  }
+
+  setGainNode(value: any) {
+    this.gainNode = value;
+    this.forceUpdate();
+  }
+
+  setGainValue(value: any) {
+    this.gainValue = value;
     this.forceUpdate();
   }
 
@@ -167,6 +194,10 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
   const setMenuMusic = (value: any) => globalStateClass.setMenuMusic(value);
   const setSoundPatchInstance = (value: any) =>
     globalStateClass.setSoundPatchInstance(value);
+  const setVolumePatchInstance = (value: any) =>
+    globalStateClass.setVolumePatchInstance(value);
+  const setGainNode = (value: any) => globalStateClass.setGainNode(value);
+  const setGainValue = (value: number) => globalStateClass.setGainValue(value);
   const setGamesRunning = (gameArr: Number[]) =>
     globalStateClass.setGamesRunning(gameArr);
   const setActiveSound = (value: string) =>
@@ -190,6 +221,9 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
         ...publicState,
         setMenuMusic,
         setSoundPatchInstance,
+        setVolumePatchInstance,
+        setGainNode,
+        setGainValue,
         setGamesRunning,
         setActiveSound,
         setSoundPacks,

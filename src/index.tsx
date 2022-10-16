@@ -9,6 +9,7 @@ import {
   Router,
   beforePatch,
   SidebarNavigation,
+  afterPatch,
 } from "decky-frontend-lib";
 import { VFC, useMemo, useEffect, useState } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
@@ -34,6 +35,10 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     setSelectedMusic,
     soundPatchInstance,
     setSoundPatchInstance,
+    volumePatchInstance,
+    setVolumePatchInstance,
+    gainValue,
+    setGainNode,
   } = useGlobalState();
 
   const [dummyFuncResult, setDummyResult] = useState<boolean>(false);
@@ -70,6 +75,25 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         setSoundPacks(data);
       });
     });
+
+    volumePatchInstance.unpatch();
+    const newVolumePatch = afterPatch(
+      AudioParent.m_GamepadUIAudioStore.m_AudioPlaybackManager.__proto__,
+      "GetActiveDestination",
+      function (_, ret) {
+        // @ts-ignore
+        const gainNode = new GainNode(this.context, { gain: gainValue });
+        gainNode.connect(ret);
+        // debugger;
+        try {
+          setGainNode(gainNode);
+        } catch (e) {
+          console.log(e);
+        }
+        return gainNode;
+      }
+    );
+    setVolumePatchInstance(newVolumePatch);
 
     // Unpatch and re-patch the sound effect player
     soundPatchInstance.unpatch();
@@ -255,9 +279,27 @@ const PackManagerRouter: VFC = () => {
 
 export default definePlugin((serverApi: ServerAPI) => {
   python.setServer(serverApi);
-
   const state: GlobalState = new GlobalState();
   let menuMusic: any = null;
+
+  const volumePatchInstance = afterPatch(
+    AudioParent.m_GamepadUIAudioStore.m_AudioPlaybackManager.__proto__,
+    "GetActiveDestination",
+    function (_, ret) {
+      const { gainValue } = state.getPublicState();
+      // @ts-ignore
+      const gainNode = new GainNode(this.context, { gain: gainValue });
+      gainNode.connect(ret);
+      // debugger;
+      try {
+        state.setGainNode(gainNode);
+      } catch (e) {
+        console.log(e);
+      }
+      return gainNode;
+    }
+  );
+  state.setVolumePatchInstance(volumePatchInstance);
 
   // The sound effect intercept/player
   // Needs to be stored in globalstate in order to unpatch
@@ -386,12 +428,14 @@ export default definePlugin((serverApi: ServerAPI) => {
     ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
-      const { menuMusic, soundPatchInstance } = state.getPublicState();
+      const { menuMusic, soundPatchInstance, volumePatchInstance } =
+        state.getPublicState();
       if (menuMusic != null) {
         menuMusic.StopPlayback();
         state.setMenuMusic(null);
       }
       soundPatchInstance.unpatch();
+      volumePatchInstance.unpatch();
       AppStateRegistrar.unregister();
     },
   };
