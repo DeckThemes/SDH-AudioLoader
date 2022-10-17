@@ -14,7 +14,7 @@ import {
 } from "decky-frontend-lib";
 import { VFC, useMemo, useEffect, useState } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
-import { FaMusic, FaVolumeUp } from "react-icons/fa";
+import { FaVolumeUp, FaMusic } from "react-icons/fa";
 import { AudioParent } from "./gamepadAudioFinder";
 import { PackBrowserPage, UninstallPage, AboutPage } from "./pack-manager";
 import * as python from "./python";
@@ -35,15 +35,10 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     setMenuMusic,
     selectedMusic,
     setSelectedMusic,
-    soundPatchInstance,
-    setSoundPatchInstance,
-    volumePatchInstance,
-    setVolumePatchInstance,
     soundVolume,
     setSoundVolume,
     musicVolume,
     setMusicVolume,
-    setGainNode,
     gainNode,
   } = useGlobalState();
 
@@ -76,79 +71,12 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     }
   }
 
-  function fullReload() {
-    // Re-fetch locally installed packs
+  function refetchLocalPacks() {
     python.resolve(python.reloadPacksDir(), () => {
       python.resolve(python.getSoundPacks(), (data: any) => {
         setSoundPacks(data);
       });
     });
-
-    volumePatchInstance.unpatch();
-    const newVolumePatch = afterPatch(
-      AudioParent.m_GamepadUIAudioStore.m_AudioPlaybackManager.__proto__,
-      "GetActiveDestination",
-      function (_, ret) {
-        // @ts-ignore
-        const gainNode = new GainNode(this.context, { gain: soundVolume });
-        gainNode.connect(ret);
-        try {
-          setGainNode(gainNode);
-          console.log("setGainNode", gainNode, soundVolume);
-        } catch (e) {
-          console.log(e);
-        }
-        return gainNode;
-      }
-    );
-    setVolumePatchInstance(newVolumePatch);
-
-    // Unpatch and re-patch the sound effect player
-    soundPatchInstance.unpatch();
-    const newPatchInstance = beforePatch(
-      AudioParent.GamepadUIAudio.m_AudioPlaybackManager.__proto__,
-      "PlayAudioURL",
-      (args) => {
-        // Since this isn't in a react component, this uses the getter function of the globalState instead of just the react variables
-        // It does the same thing
-        let newSoundURL: string = "";
-        switch (activeSound) {
-          case "Default":
-            newSoundURL = args[0];
-            break;
-          default:
-            const soundName = args[0].slice(8);
-            const currentPack = soundPacks.find((e) => e.name === activeSound);
-            // Ignore check
-            if (currentPack?.ignore.includes(args[0].slice(8))) {
-              newSoundURL = args[0];
-              break;
-            }
-            // Mapping check
-            if (Object.keys(currentPack?.mappings || {}).includes(soundName)) {
-              const randIndex = Math.trunc(
-                Math.random() * currentPack?.mappings[soundName].length
-              );
-              const mappedFileName =
-                currentPack?.mappings[soundName][randIndex];
-              newSoundURL = `/sounds_custom/${
-                currentPack?.path || "/error"
-              }/${mappedFileName}`;
-              break;
-            }
-            // Default path-replacing behavior
-            newSoundURL = args[0].replace(
-              "sounds/",
-              `sounds_custom/${currentPack?.path || "/error"}/`
-            );
-            break;
-        }
-        args[0] = newSoundURL;
-        return [newSoundURL];
-      }
-    );
-    setSoundPatchInstance(newPatchInstance);
-    restartMusicPlayer(selectedMusic);
   }
 
   const SoundPackDropdownOptions = useMemo(() => {
@@ -199,6 +127,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         <PanelSectionRow>
           <DropdownItem
             bottomSeparator="none"
+            onMenuWillOpen={() => refetchLocalPacks()}
             menuLabel="Sound Pack"
             rgOptions={SoundPackDropdownOptions}
             selectedOption={
@@ -250,6 +179,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         <PanelSectionRow>
           <DropdownItem
             bottomSeparator="none"
+            onMenuWillOpen={() => refetchLocalPacks()}
             menuLabel="Music Pack"
             rgOptions={MusicPackDropdownOptions}
             selectedOption={
@@ -289,7 +219,11 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               };
               python.setConfig(configObj);
             }}
-            icon={<FaMusic />}
+            icon={
+              <FaMusic
+                style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }}
+              />
+            }
           />
         </PanelSectionRow>
       </PanelSection>
@@ -304,17 +238,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             }}
           >
             Manage Packs
-          </ButtonItem>
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ButtonItem
-            bottomSeparator="standard"
-            layout="below"
-            onClick={() => {
-              fullReload();
-            }}
-          >
-            Reload Plugin
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
