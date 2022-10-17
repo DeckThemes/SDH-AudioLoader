@@ -10,6 +10,7 @@ import {
   beforePatch,
   SidebarNavigation,
   afterPatch,
+  SliderField,
 } from "decky-frontend-lib";
 import { VFC, useMemo, useEffect, useState } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
@@ -37,8 +38,11 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     setSoundPatchInstance,
     volumePatchInstance,
     setVolumePatchInstance,
-    gainValue,
+    soundVolume,
+    setSoundVolume,
+    musicVolume,
     setGainNode,
+    gainNode,
   } = useGlobalState();
 
   const [dummyFuncResult, setDummyResult] = useState<boolean>(false);
@@ -82,7 +86,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       "GetActiveDestination",
       function (_, ret) {
         // @ts-ignore
-        const gainNode = new GainNode(this.context, { gain: gainValue });
+        const gainNode = new GainNode(this.context, { gain: soundVolume });
         gainNode.connect(ret);
         // debugger;
         try {
@@ -200,6 +204,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               const configObj = {
                 selected_pack: option.label,
                 selected_music: selectedMusic,
+                sound_volume: soundVolume,
+                music_volume: musicVolume,
               };
               python.setConfig(configObj);
             }}
@@ -221,6 +227,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: option.label,
+                sound_volume: soundVolume,
+                music_volume: musicVolume,
               };
               python.setConfig(configObj);
               restartMusicPlayer(option.label as string);
@@ -229,6 +237,26 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         </PanelSectionRow>
       </PanelSection>
       <PanelSection title="Settings">
+        <PanelSectionRow>
+          <SliderField
+            label="Sound Volume"
+            value={soundVolume}
+            min={0}
+            max={2}
+            step={0.1}
+            onChange={(value) => {
+              gainNode.gain.value = value;
+              setSoundVolume(value);
+              const configObj = {
+                selected_pack: activeSound,
+                selected_music: selectedMusic,
+                sound_volume: value,
+                music_volume: musicVolume,
+              };
+              python.setConfig(configObj);
+            }}
+          />
+        </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem
             bottomSeparator="thick"
@@ -282,13 +310,14 @@ export default definePlugin((serverApi: ServerAPI) => {
   const state: GlobalState = new GlobalState();
   let menuMusic: any = null;
 
+  // Big thanks to AA and Mintexists for help finding this
   const volumePatchInstance = afterPatch(
     AudioParent.m_GamepadUIAudioStore.m_AudioPlaybackManager.__proto__,
     "GetActiveDestination",
     function (_, ret) {
-      const { gainValue } = state.getPublicState();
+      const { soundVolume } = state.getPublicState();
       // @ts-ignore
-      const gainNode = new GainNode(this.context, { gain: gainValue });
+      const gainNode = new GainNode(this.context, { gain: soundVolume });
       gainNode.connect(ret);
       // debugger;
       try {
@@ -355,6 +384,16 @@ export default definePlugin((serverApi: ServerAPI) => {
       state.setActiveSound(data?.selected_pack || "Default");
       const configSelectedMusic = data?.selected_music || "None";
       state.setSelectedMusic(configSelectedMusic);
+
+      // Even though we did the gain node stuff before this runs, this now adds the user selected gain value into the node
+      const configSoundVolume = data?.sound_volume ?? 1;
+      state.setSoundVolume(configSoundVolume);
+      if (configSoundVolume !== 1) {
+        const { gainNode } = state.getPublicState();
+        gainNode.gain.value = configSoundVolume;
+      }
+      const configMusicVolume = data?.music_volume ?? 1;
+      state.setMusicVolume(configMusicVolume);
 
       // Plays menu music initially
       // TODO: Add check if game is currently running

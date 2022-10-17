@@ -7,7 +7,8 @@ interface PublicGlobalState {
   soundPatchInstance: any;
   volumePatchInstance: any;
   gainNode: any;
-  gainValue: any;
+  soundVolume: number;
+  musicVolume: number;
   gamesRunning: Number[];
   activeSound: string;
   soundPacks: Pack[];
@@ -26,7 +27,8 @@ interface PublicGlobalStateContext extends PublicGlobalState {
   setSoundPatchInstance(value: any): void;
   setVolumePatchInstance(value: any): void;
   setGainNode(value: any): void;
-  setGainValue(value: number): void;
+  setSoundVolume(value: number): void;
+  setMusicVolume(value: number): void;
   setGamesRunning(value: Number[]): void;
   setActiveSound(value: string): void;
   setSoundPacks(packArr: Pack[]): void;
@@ -44,7 +46,8 @@ export class GlobalState {
   private soundPatchInstance: any = null;
   private volumePatchInstance: any = null;
   private gainNode: any = null;
-  private gainValue: number = 1;
+  private soundVolume: number = 1;
+  private musicVolume: number = 1;
   private gamesRunning: Number[] = [];
   private activeSound: string = "Default";
   private soundPacks: Pack[] = [];
@@ -67,7 +70,8 @@ export class GlobalState {
       soundPatchInstance: this.soundPatchInstance,
       volumePatchInstance: this.volumePatchInstance,
       gainNode: this.gainNode,
-      gainValue: this.gainValue,
+      soundVolume: this.soundVolume,
+      musicVolume: this.musicVolume,
       gamesRunning: this.gamesRunning,
       activeSound: this.activeSound,
       soundPacks: this.soundPacks,
@@ -100,8 +104,13 @@ export class GlobalState {
     this.forceUpdate();
   }
 
-  setGainValue(value: any) {
-    this.gainValue = value;
+  setSoundVolume(value: any) {
+    this.soundVolume = value;
+    this.forceUpdate();
+  }
+
+  setMusicVolume(value: any) {
+    this.musicVolume = value;
     this.forceUpdate();
   }
 
@@ -197,7 +206,10 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
   const setVolumePatchInstance = (value: any) =>
     globalStateClass.setVolumePatchInstance(value);
   const setGainNode = (value: any) => globalStateClass.setGainNode(value);
-  const setGainValue = (value: number) => globalStateClass.setGainValue(value);
+  const setSoundVolume = (value: number) =>
+    globalStateClass.setSoundVolume(value);
+  const setMusicVolume = (value: number) =>
+    globalStateClass.setMusicVolume(value);
   const setGamesRunning = (gameArr: Number[]) =>
     globalStateClass.setGamesRunning(gameArr);
   const setActiveSound = (value: string) =>
@@ -223,7 +235,8 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
         setSoundPatchInstance,
         setVolumePatchInstance,
         setGainNode,
-        setGainValue,
+        setSoundVolume,
+        setMusicVolume,
         setGamesRunning,
         setActiveSound,
         setSoundPacks,
