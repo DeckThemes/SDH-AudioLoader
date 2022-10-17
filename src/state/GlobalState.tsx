@@ -47,7 +47,7 @@ export class GlobalState {
   private volumePatchInstance: any = null;
   private gainNode: any = null;
   private soundVolume: number = 1;
-  private musicVolume: number = 1;
+  private musicVolume: number = 0.5;
   private gamesRunning: Number[] = [];
   private activeSound: string = "Default";
   private soundPacks: Pack[] = [];

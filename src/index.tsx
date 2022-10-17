@@ -8,7 +8,7 @@ import {
   DropdownItem,
   Router,
   beforePatch,
-  SidebarNavigation,
+  Tabs,
   afterPatch,
   SliderField,
 } from "decky-frontend-lib";
@@ -41,6 +41,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     soundVolume,
     setSoundVolume,
     musicVolume,
+    setMusicVolume,
     setGainNode,
     gainNode,
   } = useGlobalState();
@@ -57,17 +58,19 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 
   function restartMusicPlayer(newMusic: string) {
     if (menuMusic !== null) {
-      menuMusic.StopPlayback();
+      menuMusic.pause();
+      menuMusic.currentTime = 0;
       setMenuMusic(null);
     }
     // This makes sure if you are in a game, music doesn't start playing
     if (newMusic !== "None" && gamesRunning.length === 0) {
       const currentPack = soundPacks.find((e) => e.name === newMusic);
-      const newMenuMusic =
-        AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
-          `/sounds_custom/${currentPack?.path || "/error"}/menu_music.mp3`,
-          999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
-        );
+      const newMenuMusic = new Audio(
+        `/sounds_custom/${currentPack?.path || "error"}/menu_music.mp3`
+      );
+      newMenuMusic.play();
+      newMenuMusic.loop = true;
+      newMenuMusic.volume = musicVolume;
       setMenuMusic(newMenuMusic);
     }
   }
@@ -88,9 +91,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         // @ts-ignore
         const gainNode = new GainNode(this.context, { gain: soundVolume });
         gainNode.connect(ret);
-        // debugger;
         try {
           setGainNode(gainNode);
+          console.log("setGainNode", gainNode, soundVolume);
         } catch (e) {
           console.log(e);
         }
@@ -245,13 +248,37 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             max={2}
             step={0.1}
             onChange={(value) => {
-              gainNode.gain.value = value;
+              gainNode.gain.setValueAtTime(
+                value,
+                gainNode.context.currentTime + 0.01
+              );
+              // gainNode.gain.value = value;
               setSoundVolume(value);
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: selectedMusic,
                 sound_volume: value,
                 music_volume: musicVolume,
+              };
+              python.setConfig(configObj);
+            }}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <SliderField
+            label="Music Volume"
+            value={musicVolume}
+            min={0}
+            max={1}
+            step={0.01}
+            onChange={(value) => {
+              setMusicVolume(value);
+              menuMusic.volume = value;
+              const configObj = {
+                selected_pack: activeSound,
+                selected_music: selectedMusic,
+                sound_volume: soundVolume,
+                music_volume: value,
               };
               python.setConfig(configObj);
             }}
@@ -285,23 +312,35 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 };
 
 const PackManagerRouter: VFC = () => {
+  const [currentTabRoute, setCurrentTabRoute] = useState<string>("browser");
   return (
-    <SidebarNavigation
-      title="Pack Manager"
-      showTitle
-      pages={[
-        {
-          title: "Browse Packs",
-          content: <PackBrowserPage />,
-          route: "/audiopack-manager/browser",
-        },
-        {
-          title: "Uninstall Packs",
-          content: <UninstallPage />,
-          route: "/audiopack-manager/uninstall",
-        },
-      ]}
-    />
+    <div
+      style={{
+        marginTop: "40px",
+        height: "calc(100% - 40px)",
+        background: "#0005",
+      }}
+    >
+      <Tabs
+        activeTab={currentTabRoute}
+        // @ts-ignore
+        onShowTab={(tabID: string) => {
+          setCurrentTabRoute(tabID);
+        }}
+        tabs={[
+          {
+            title: "Browse Packs",
+            content: <PackBrowserPage />,
+            id: "browser",
+          },
+          {
+            title: "Uninstall Packs",
+            content: <UninstallPage />,
+            id: "uninstall",
+          },
+        ]}
+      />
+    </div>
   );
 };
 
@@ -311,7 +350,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   let menuMusic: any = null;
 
   // Big thanks to AA and Mintexists for help finding this
-  const volumePatchInstance = afterPatch(
+  const soundVolumePatchInstance = afterPatch(
     AudioParent.m_GamepadUIAudioStore.m_AudioPlaybackManager.__proto__,
     "GetActiveDestination",
     function (_, ret) {
@@ -319,7 +358,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       // @ts-ignore
       const gainNode = new GainNode(this.context, { gain: soundVolume });
       gainNode.connect(ret);
-      // debugger;
       try {
         state.setGainNode(gainNode);
       } catch (e) {
@@ -328,7 +366,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       return gainNode;
     }
   );
-  state.setVolumePatchInstance(volumePatchInstance);
+  state.setVolumePatchInstance(soundVolumePatchInstance);
 
   // The sound effect intercept/player
   // Needs to be stored in globalstate in order to unpatch
@@ -384,15 +422,9 @@ export default definePlugin((serverApi: ServerAPI) => {
       state.setActiveSound(data?.selected_pack || "Default");
       const configSelectedMusic = data?.selected_music || "None";
       state.setSelectedMusic(configSelectedMusic);
-
-      // Even though we did the gain node stuff before this runs, this now adds the user selected gain value into the node
       const configSoundVolume = data?.sound_volume ?? 1;
       state.setSoundVolume(configSoundVolume);
-      if (configSoundVolume !== 1) {
-        const { gainNode } = state.getPublicState();
-        gainNode.gain.value = configSoundVolume;
-      }
-      const configMusicVolume = data?.music_volume ?? 1;
+      const configMusicVolume = data?.music_volume ?? 0.5;
       state.setMusicVolume(configMusicVolume);
 
       // Plays menu music initially
@@ -402,11 +434,13 @@ export default definePlugin((serverApi: ServerAPI) => {
         const currentPack = soundPacks.find(
           (e) => e.name === configSelectedMusic
         );
-        menuMusic =
-          AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
-            `/sounds_custom/${currentPack?.path || "/error"}/menu_music.mp3`,
-            999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
-          );
+        menuMusic = new Audio(
+          `/sounds_custom/${currentPack?.path || "error"}/menu_music.mp3`
+        );
+        menuMusic.play();
+        menuMusic.loop = true;
+        menuMusic.volume = configMusicVolume;
+        console.log("play and loop ran", menuMusic);
         state.setMenuMusic(menuMusic);
       }
     });
@@ -470,7 +504,8 @@ export default definePlugin((serverApi: ServerAPI) => {
       const { menuMusic, soundPatchInstance, volumePatchInstance } =
         state.getPublicState();
       if (menuMusic != null) {
-        menuMusic.StopPlayback();
+        menuMusic.pause();
+        menuMusic.currentTime = 0;
         state.setMenuMusic(null);
       }
       soundPatchInstance.unpatch();
