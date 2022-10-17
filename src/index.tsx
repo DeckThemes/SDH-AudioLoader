@@ -259,7 +259,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               };
               python.setConfig(configObj);
             }}
-            icon={<FaVolumeUp />}
+            icon={<FaMusic />}
           />
         </PanelSectionRow>
         <PanelSectionRow>
@@ -284,7 +284,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               };
               python.setConfig(configObj);
             }}
-            icon={<FaMusic />}
+            icon={<FaVolumeUp />}
           />
         </PanelSectionRow>
         <PanelSectionRow>
