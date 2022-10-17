@@ -14,6 +14,7 @@ import {
 } from "decky-frontend-lib";
 import { VFC, useMemo, useEffect, useState } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
+import { FaMusic, FaVolumeUp } from "react-icons/fa";
 import { AudioParent } from "./gamepadAudioFinder";
 import { PackBrowserPage, UninstallPage, AboutPage } from "./pack-manager";
 import * as python from "./python";
@@ -190,7 +191,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       <PanelSection title="Packs">
         <PanelSectionRow>
           <DropdownItem
-            bottomSeparator="standard"
+            bottomSeparator="none"
             label="Sounds"
             menuLabel="Sounds"
             rgOptions={SoundPackDropdownOptions}
@@ -216,7 +217,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         </PanelSectionRow>
         <PanelSectionRow>
           <DropdownItem
-            bottomSeparator="none"
+            bottomSeparator="standard"
             label="Music"
             menuLabel="Music"
             rgOptions={MusicPackDropdownOptions}
@@ -242,7 +243,28 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       <PanelSection title="Settings">
         <PanelSectionRow>
           <SliderField
-            label="Sound Volume"
+            label={undefined}
+            value={musicVolume}
+            min={0}
+            max={1}
+            step={0.01}
+            onChange={(value) => {
+              setMusicVolume(value);
+              menuMusic.volume = value;
+              const configObj = {
+                selected_pack: activeSound,
+                selected_music: selectedMusic,
+                sound_volume: soundVolume,
+                music_volume: value,
+              };
+              python.setConfig(configObj);
+            }}
+            icon={<FaVolumeUp />}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <SliderField
+            label={undefined}
             value={soundVolume}
             min={0}
             max={2}
@@ -262,31 +284,12 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               };
               python.setConfig(configObj);
             }}
-          />
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <SliderField
-            label="Music Volume"
-            value={musicVolume}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(value) => {
-              setMusicVolume(value);
-              menuMusic.volume = value;
-              const configObj = {
-                selected_pack: activeSound,
-                selected_music: selectedMusic,
-                sound_volume: soundVolume,
-                music_volume: value,
-              };
-              python.setConfig(configObj);
-            }}
+            icon={<FaMusic />}
           />
         </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem
-            bottomSeparator="thick"
+            bottomSeparator="none"
             layout="below"
             onClick={() => {
               Router.CloseSideMenus();
@@ -298,6 +301,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem
+            bottomSeparator="standard"
             layout="below"
             onClick={() => {
               fullReload();
