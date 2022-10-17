@@ -187,13 +187,19 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   }
 
   return (
-    <div>
+    <div className="audioloader_QAM">
+      <style>
+        {`
+        .audioloader_QAM div[class^="gamepaddialog_FieldLabel_"] {
+          display: none;
+        }
+        `}
+      </style>
       <PanelSection title="Packs">
         <PanelSectionRow>
           <DropdownItem
             bottomSeparator="none"
-            label="Sounds"
-            menuLabel="Sounds"
+            menuLabel="Sound Pack"
             rgOptions={SoundPackDropdownOptions}
             selectedOption={
               // activeSound now stores a string, this just finds the corresponding option for the label
@@ -216,10 +222,35 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           />
         </PanelSectionRow>
         <PanelSectionRow>
-          <DropdownItem
+          <SliderField
             bottomSeparator="standard"
-            label="Music"
-            menuLabel="Music"
+            label={undefined}
+            value={soundVolume}
+            min={0}
+            max={1}
+            step={0.01}
+            onChange={(value) => {
+              gainNode.gain.setValueAtTime(
+                value,
+                gainNode.context.currentTime + 0.01
+              );
+              // gainNode.gain.value = value;
+              setSoundVolume(value);
+              const configObj = {
+                selected_pack: activeSound,
+                selected_music: selectedMusic,
+                sound_volume: value,
+                music_volume: musicVolume,
+              };
+              python.setConfig(configObj);
+            }}
+            icon={<FaVolumeUp />}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <DropdownItem
+            bottomSeparator="none"
+            menuLabel="Music Pack"
             rgOptions={MusicPackDropdownOptions}
             selectedOption={
               MusicPackDropdownOptions.find((e) => e.label === selectedMusic)
@@ -239,10 +270,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             }}
           />
         </PanelSectionRow>
-      </PanelSection>
-      <PanelSection title="Settings">
         <PanelSectionRow>
           <SliderField
+            bottomSeparator="standard"
             label={undefined}
             value={musicVolume}
             min={0}
@@ -262,31 +292,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             icon={<FaMusic />}
           />
         </PanelSectionRow>
-        <PanelSectionRow>
-          <SliderField
-            label={undefined}
-            value={soundVolume}
-            min={0}
-            max={2}
-            step={0.1}
-            onChange={(value) => {
-              gainNode.gain.setValueAtTime(
-                value,
-                gainNode.context.currentTime + 0.01
-              );
-              // gainNode.gain.value = value;
-              setSoundVolume(value);
-              const configObj = {
-                selected_pack: activeSound,
-                selected_music: selectedMusic,
-                sound_volume: value,
-                music_volume: musicVolume,
-              };
-              python.setConfig(configObj);
-            }}
-            icon={<FaVolumeUp />}
-          />
-        </PanelSectionRow>
+      </PanelSection>
+      <PanelSection title="Settings">
         <PanelSectionRow>
           <ButtonItem
             bottomSeparator="none"
