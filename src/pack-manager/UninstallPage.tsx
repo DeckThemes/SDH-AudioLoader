@@ -16,6 +16,8 @@ export const UninstallPage: VFC = () => {
     setSelectedMusic,
     menuMusic,
     setMenuMusic,
+    soundVolume,
+    musicVolume,
   } = useGlobalState();
 
   const [isUninstalling, setUninstalling] = useState(false);
@@ -52,6 +54,8 @@ export const UninstallPage: VFC = () => {
             activeSound === listEntry.data.name ? "Default" : activeSound,
           selected_music:
             selectedMusic === listEntry.data.name ? "None" : activeSound,
+          sound_volume: soundVolume,
+          music_volume: musicVolume,
         };
         python.setConfig(configObj);
       }
