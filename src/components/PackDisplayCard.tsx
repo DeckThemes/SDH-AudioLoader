@@ -61,7 +61,9 @@ export const PackDisplayCard: FC<{
           >
             <div
               style={{
-                backgroundImage: "url(https://i.imgur.com/nISGpci.png)",
+                background: e.music
+                  ? "url(https://i.imgur.com/nISGpci.png)"
+                  : "linear-gradient(150deg, rgba(0, 0, 0, 0) 0%, rgba(118, 118, 118, 0) 0%, rgba(255, 255, 255, 0.2) 32%, rgba(255, 255, 255, 0.2) 35%, rgba(255, 255, 255, 0.2) 38%, rgba(210, 210, 210, 0) 70%, rgba(0, 0, 0, 0) 100%) 0% 0% / cover",
                 position: "absolute",
                 top: "10%",
                 left: "0",
@@ -98,7 +100,9 @@ export const PackDisplayCard: FC<{
                 ease: "linear",
               }}
               style={{
-                backgroundImage: 'url("https://i.imgur.com/V9t3728.png")',
+                backgroundImage: e.music
+                  ? 'url("https://i.imgur.com/V9t3728.png")'
+                  : 'url("https://i.imgur.com/pWm35T0.png")',
                 position: "absolute",
                 top: "12.5%",
                 right: "0",

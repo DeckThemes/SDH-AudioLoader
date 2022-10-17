@@ -15,7 +15,7 @@ import {
 import { VFC, useMemo, useEffect, useState } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import { AudioParent } from "./gamepadAudioFinder";
-import { PackBrowserPage, UninstallPage } from "./pack-manager";
+import { PackBrowserPage, UninstallPage, AboutPage } from "./pack-manager";
 import * as python from "./python";
 import {
   GlobalState,
@@ -329,14 +329,19 @@ const PackManagerRouter: VFC = () => {
         }}
         tabs={[
           {
-            title: "Browse Packs",
+            title: "Browse",
             content: <PackBrowserPage />,
             id: "browser",
           },
           {
-            title: "Uninstall Packs",
+            title: "Uninstall",
             content: <UninstallPage />,
             id: "uninstall",
+          },
+          {
+            title: "About",
+            content: <AboutPage />,
+            id: "about",
           },
         ]}
       />

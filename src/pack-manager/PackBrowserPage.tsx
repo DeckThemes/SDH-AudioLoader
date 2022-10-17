@@ -9,7 +9,7 @@ import {
 import { useLayoutEffect, VFC, useMemo, useRef, useState } from "react";
 import { Pack, packDbEntry } from "../classes";
 import * as python from "../python";
-import { TiRefreshOutline } from "react-icons/ti";
+import { FaSyncAlt } from "react-icons/fa";
 import { useGlobalState } from "../state/GlobalState";
 import "../audiomanager.css";
 import { PackDisplayCard } from "../components/packDisplayCard";
@@ -198,7 +198,9 @@ export const PackBrowserPage: VFC = () => {
               // marginLeft: "auto",
             }}
           >
-            <TiRefreshOutline style={{ transform: "translate(0, 2px)" }} />
+            <FaSyncAlt
+              style={{ transform: "translate(0, 2px)", marginRight: 8 }}
+            />
             <span>Refresh</span>
           </DialogButton>
         </Focusable>
