@@ -61,8 +61,15 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     // This makes sure if you are in a game, music doesn't start playing
     if (newMusic !== "None" && gamesRunning.length === 0) {
       const currentPack = soundPacks.find((e) => e.name === newMusic);
+      let musicFileName = "menu_music.mp3";
+      if (Object.keys(currentPack?.mappings || {}).includes("menu_music.mp3")) {
+        const randIndex = Math.trunc(
+          Math.random() * currentPack?.mappings["menu_music.mp3"].length
+        );
+        musicFileName = currentPack?.mappings["menu_music.mp3"][randIndex];
+      }
       const newMenuMusic = new Audio(
-        `/sounds_custom/${currentPack?.path || "error"}/menu_music.mp3`
+        `/sounds_custom/${currentPack?.path || "error"}/${musicFileName}`
       );
       newMenuMusic.play();
       newMenuMusic.loop = true;
@@ -373,8 +380,17 @@ export default definePlugin((serverApi: ServerAPI) => {
         const currentPack = soundPacks.find(
           (e) => e.name === configSelectedMusic
         );
+        let musicFileName = "menu_music.mp3";
+        if (
+          Object.keys(currentPack?.mappings || {}).includes("menu_music.mp3")
+        ) {
+          const randIndex = Math.trunc(
+            Math.random() * currentPack?.mappings["menu_music.mp3"].length
+          );
+          musicFileName = currentPack?.mappings["menu_music.mp3"][randIndex];
+        }
         menuMusic = new Audio(
-          `/sounds_custom/${currentPack?.path || "error"}/menu_music.mp3`
+          `/sounds_custom/${currentPack?.path || "error"}/${musicFileName}`
         );
         menuMusic.play();
         menuMusic.loop = true;
@@ -390,14 +406,20 @@ export default definePlugin((serverApi: ServerAPI) => {
     // Refer to the SteamClient.d.ts or just console.log(SteamClient) to see all of it's methods
     SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
       (update: AppState) => {
-        const { soundPacks, menuMusic, selectedMusic, gamesRunning } =
-          state.getPublicState();
+        const {
+          soundPacks,
+          menuMusic,
+          selectedMusic,
+          gamesRunning,
+          musicVolume,
+        } = state.getPublicState();
         if (selectedMusic !== "None") {
           if (update.bRunning) {
             // Because gamesRunning is in globalState, array methods like push and splice don't work
             state.setGamesRunning([...gamesRunning, update.unAppID]);
             if (menuMusic != null) {
-              menuMusic.StopPlayback();
+              menuMusic.pause();
+              menuMusic.currentTime = 0;
               state.setMenuMusic(null);
             }
           } else {
@@ -410,13 +432,27 @@ export default definePlugin((serverApi: ServerAPI) => {
               const currentMusic = soundPacks.find(
                 (e) => e.name === selectedMusic
               );
-              const newMenuMusic =
-                AudioParent.GamepadUIAudio.AudioPlaybackManager.PlayAudioURLWithRepeats(
-                  `/sounds_custom/${
-                    currentMusic?.path || "/error"
-                  }/menu_music.mp3`,
-                  999 // if someone complains this isn't infinite, just say it's a Feature™ for if you go afk
+              let musicFileName = "menu_music.mp3";
+              if (
+                Object.keys(currentMusic?.mappings || {}).includes(
+                  "menu_music.mp3"
+                )
+              ) {
+                const randIndex = Math.trunc(
+                  Math.random() *
+                    currentMusic?.mappings["menu_music.mp3"].length
                 );
+                musicFileName =
+                  currentMusic?.mappings["menu_music.mp3"][randIndex];
+              }
+              const newMenuMusic = new Audio(
+                `/sounds_custom/${
+                  currentMusic?.path || "error"
+                }/${musicFileName}`
+              );
+              newMenuMusic.play();
+              newMenuMusic.loop = true;
+              newMenuMusic.volume = musicVolume;
               // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
               state.setMenuMusic(newMenuMusic);
             }
