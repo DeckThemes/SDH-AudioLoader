@@ -5,7 +5,9 @@ from logging import getLogger
 
 starter_config_data = {
   "selected_pack": "Default",
-  "selected_music": "None"
+  "selected_music": "None",
+  "sound_volume": 1,
+  "music_volume": 0.5
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -128,9 +130,6 @@ class Pack:
         
         self.packPath = packPath
 
-    async def get_loader_version(self) -> int:
-        return AUDIO_LOADER_VERSION
-
     async def delete(self) -> Result:
         try:
             shutil.rmtree(self.packPath)
@@ -154,6 +153,9 @@ class Pack:
 class Plugin:
     async def dummy_function(self) -> bool:
         return True
+
+    async def get_loader_version(self) -> int:
+        return AUDIO_LOADER_VERSION
 
     async def get_sound_packs(self) -> list:
         return [x.to_dict() for x in self.soundPacks]
@@ -258,7 +260,9 @@ class Plugin:
         self.soundPacks = []
         self.config = {
             "selected_pack": "Default", 
-            "selected_music": "None"
+            "selected_music": "None",
+            "sound_volume": 1,
+            "music_volume": 0.5
         }
 
         self.remote = RemoteInstall(self)
