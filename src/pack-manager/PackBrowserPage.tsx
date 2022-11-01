@@ -12,7 +12,7 @@ import * as python from "../python";
 import { FaSyncAlt } from "react-icons/fa";
 import { useGlobalState } from "../state/GlobalState";
 import "../audiomanager.css";
-import { PackDisplayCard } from "../components/packDisplayCard";
+import { PackDisplayCard } from "../components";
 
 export const PackBrowserPage: VFC = () => {
   const {
