@@ -13,7 +13,7 @@ export const AboutPage: VFC = () => {
       <h2>Creating Packs</h2>
       <p>
         If you are interested in creating a music or sound pack for Audio
-        Loader, please consult our guide on GitHub. https://eme.wtf/audioguide
+        Loader, please consult the DeckThemes Docs. https://docs.deckthemes.com
       </p>
     </>
   );

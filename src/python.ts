@@ -35,10 +35,9 @@ export async function getBackendVersion(): Promise<any> {
 }
 
 export async function fetchPackDb(): Promise<any> {
-  return server!.fetchNoCors(
-    "https://github.com/EMERALD0874/AudioLoader-PackDB/releases/download/1.2.0/packs.json",
-    { method: "GET" }
-  );
+  return server!.fetchNoCors("https://api.deckthemes.com/themes/legacy/audio", {
+    method: "GET",
+  });
 }
 
 // getSoundPacks just fetches the packs already stored in python memory, you need to call this reload function to re-fetch the folder list
