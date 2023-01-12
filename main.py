@@ -3,6 +3,8 @@ import shutil
 import os
 from logging import getLogger
 
+from utils import store_read as util_store_read, store_write as util_store_write
+
 starter_config_data = {
   "selected_pack": "Default",
   "selected_music": "None",
@@ -232,6 +234,13 @@ class Plugin:
                     Log("Audio Loader - Sound pack {} added".format(packData.name))
             except Exception as e:
                 Log("Audio Loader - Error parsing sound pack: {}".format(e))
+
+    async def store_read(self, key : str) -> str:
+        return util_store_read(key)
+    
+    async def store_write(self, key : str, val : str) -> dict:
+        util_store_write(key, val)
+        return Result(True).to_dict()
 
     async def _load(self):
         packsPath = "/home/deck/homebrew/sounds"

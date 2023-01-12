@@ -12,17 +12,20 @@ import {
   afterPatch,
   SliderField,
 } from "decky-frontend-lib";
-import { VFC, useMemo, useEffect, useState } from "react";
+import { Permissions } from "./apiTypes";
+import { VFC, useMemo, useEffect } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import { FaVolumeUp, FaMusic } from "react-icons/fa";
 import { AudioParent } from "./gamepadAudioFinder";
-import { PackBrowserPage, UninstallPage, AboutPage } from "./pack-manager";
+import { UninstallPage, SettingsPage } from "./pack-manager";
 import * as python from "./python";
+import * as api from "./api";
 import {
   GlobalState,
   GlobalStateContextProvider,
   useGlobalState,
 } from "./state/GlobalState";
+import { ThemeBrowserPage } from "./pack-manager/ThemeBrowserPage";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
@@ -241,7 +244,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 };
 
 const PackManagerRouter: VFC = () => {
-  const [currentTabRoute, setCurrentTabRoute] = useState<string>("browser");
+  const { apiMeData, currentTab, setGlobalState } = useGlobalState();
+
   return (
     <div
       style={{
@@ -251,26 +255,44 @@ const PackManagerRouter: VFC = () => {
       }}
     >
       <Tabs
-        activeTab={currentTabRoute}
+        activeTab={currentTab}
         // @ts-ignore
         onShowTab={(tabID: string) => {
-          setCurrentTabRoute(tabID);
+          setGlobalState("currentTab", tabID);
         }}
         tabs={[
           {
             title: "Browse",
-            content: <PackBrowserPage />,
-            id: "browser",
+            content: <ThemeBrowserPage />,
+            id: "BrowsePacks",
           },
+          ...(!!apiMeData
+            ? [
+                {
+                  title: "Starred Themes",
+                  content: <ThemeBrowserPage />,
+                  id: "StarredPacks",
+                },
+                ...(apiMeData.permissions.includes(Permissions.viewSubs)
+                  ? [
+                      {
+                        title: "Submissions",
+                        content: <ThemeBrowserPage />,
+                        id: "AudioSubmissions",
+                      },
+                    ]
+                  : []),
+              ]
+            : []),
           {
             title: "Uninstall",
             content: <UninstallPage />,
-            id: "uninstall",
+            id: "UninstallPacks",
           },
           {
-            title: "About",
-            content: <AboutPage />,
-            id: "about",
+            title: "Settings",
+            content: <SettingsPage />,
+            id: "AudioLoaderSettings",
           },
         ]}
       />
@@ -282,6 +304,8 @@ export default definePlugin((serverApi: ServerAPI) => {
   const state: GlobalState = new GlobalState();
   python.setServer(serverApi);
   python.setStateClass(state);
+  api.setServer(serverApi);
+  api.setStateClass(state);
   let menuMusic: any = null;
 
   console.log("test");

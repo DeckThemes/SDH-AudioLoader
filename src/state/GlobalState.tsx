@@ -1,8 +1,43 @@
 import { SingleDropdownOption } from "decky-frontend-lib";
 import { createContext, FC, useContext, useEffect, useState } from "react";
+import {
+  AccountData,
+  ThemeQueryResponse,
+  FilterQueryResponse,
+  ThemeQueryRequest,
+  PartialCSSThemeInfo,
+} from "../apiTypes";
 import { Pack, packDbEntry } from "../classes";
 
 interface PublicGlobalState {
+  // API
+  apiUrl: string;
+  apiShortToken: string;
+  apiFullToken: string;
+  apiTokenExpireDate: Date | number | undefined;
+  apiMeData: AccountData | undefined;
+
+  // Browse Page
+  serverFilters: FilterQueryResponse;
+  prevSearchOpts: ThemeQueryRequest;
+  browseThemeList: ThemeQueryResponse;
+  themeSearchOpts: ThemeQueryRequest;
+
+  // Starred Page
+  starredSearchOpts: ThemeQueryRequest;
+  starredServerFilters: FilterQueryResponse;
+  starredThemeList: ThemeQueryResponse;
+  prevStarSearchOpts: ThemeQueryRequest;
+
+  // Submission Page
+  prevSubSearchOpts: ThemeQueryRequest;
+  submissionSearchOpts: ThemeQueryRequest;
+  submissionServerFilters: FilterQueryResponse;
+  submissionThemeList: ThemeQueryResponse;
+
+  currentTab: string;
+  currentExpandedTheme: PartialCSSThemeInfo | undefined;
+
   dummyFuncResult: boolean;
   menuMusic: any;
   soundPatchInstance: any;
@@ -14,10 +49,6 @@ interface PublicGlobalState {
   activeSound: string;
   soundPacks: Pack[];
   selectedMusic: string;
-  browserPackList: packDbEntry[];
-  searchFieldValue: string;
-  selectedSort: number;
-  selectedTarget: SingleDropdownOption;
   isInstalling: boolean;
 }
 
@@ -30,6 +61,79 @@ interface PublicGlobalStateContext extends PublicGlobalState {
 
 // This class creates the getter and setter functions for all of the global state data.
 export class GlobalState {
+  // Api
+  private apiUrl: string = "https://api.deckthemes.com";
+  private apiShortToken: string = "";
+  private apiFullToken: string = "";
+  private apiTokenExpireDate: Date | number | undefined = undefined;
+  private apiMeData: AccountData | undefined = undefined;
+
+  private currentTab: string = "";
+  private currentExpandedTheme: PartialCSSThemeInfo | undefined = undefined;
+
+  // Browse Tab
+  private browseThemeList: ThemeQueryResponse = { total: 0, items: [] };
+  private prevSearchOpts: ThemeQueryRequest = {
+    page: 1,
+    perPage: 50,
+    filters: "All",
+    order: "Last Updated",
+    search: "",
+  };
+  private serverFilters: FilterQueryResponse = {
+    filters: ["All"],
+    order: ["Last Updated"],
+  };
+  private themeSearchOpts: ThemeQueryRequest = {
+    page: 1,
+    perPage: 50,
+    filters: "All",
+    order: "Last Updated",
+    search: "",
+  };
+
+  // Stars
+  private prevStarSearchOpts: ThemeQueryRequest = {
+    page: 1,
+    perPage: 50,
+    filters: "All",
+    order: "Last Updated",
+    search: "",
+  };
+  private starredSearchOpts: ThemeQueryRequest = {
+    page: 1,
+    perPage: 50,
+    filters: "All",
+    order: "Last Updated",
+    search: "",
+  };
+  private starredServerFilters: FilterQueryResponse = {
+    filters: ["All"],
+    order: ["Last Updated"],
+  };
+  private starredThemeList: ThemeQueryResponse = { total: 0, items: [] };
+
+  // Submissions
+  private prevSubSearchOpts: ThemeQueryRequest = {
+    page: 1,
+    perPage: 50,
+    filters: "All",
+    order: "Last Updated",
+    search: "",
+  };
+  private submissionSearchOpts: ThemeQueryRequest = {
+    page: 1,
+    perPage: 50,
+    filters: "All",
+    order: "Last Updated",
+    search: "",
+  };
+  private submissionServerFilters: FilterQueryResponse = {
+    filters: ["All"],
+    order: ["Last Updated"],
+  };
+  private submissionThemeList: ThemeQueryResponse = { total: 0, items: [] };
+
   private dummyFuncResult: boolean = false;
   private menuMusic: any = null;
   private soundPatchInstance: any = null;
@@ -55,6 +159,14 @@ export class GlobalState {
 
   getPublicState() {
     return {
+      apiUrl: this.apiUrl,
+      apiShortToken: this.apiShortToken,
+      apiFullToken: this.apiFullToken,
+      apiTokenExpireDate: this.apiTokenExpireDate,
+      apiMeData: this.apiMeData,
+
+      currentExpandedTheme: this.currentExpandedTheme,
+      currentTab: this.currentTab,
       dummyFuncResult: this.dummyFuncResult,
       menuMusic: this.menuMusic,
       soundPatchInstance: this.soundPatchInstance,
@@ -71,6 +183,24 @@ export class GlobalState {
       selectedSort: this.selectedSort,
       selectedTarget: this.selectedTarget,
       isInstalling: this.isInstalling,
+
+      // Browse Page
+      themeSearchOpts: this.themeSearchOpts,
+      serverFilters: this.serverFilters,
+      browseThemeList: this.browseThemeList,
+      prevSearchOpts: this.prevSearchOpts,
+
+      // Starred
+      prevStarSearchOpts: this.prevStarSearchOpts,
+      starredSearchOpts: this.starredSearchOpts,
+      starredServerFilters: this.starredServerFilters,
+      starredThemeList: this.starredThemeList,
+
+      // Submissions
+      prevSubSearchOpts: this.prevSubSearchOpts,
+      submissionSearchOpts: this.submissionSearchOpts,
+      submissionServerFilters: this.submissionServerFilters,
+      submissionThemeList: this.submissionThemeList,
     };
   }
 

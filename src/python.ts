@@ -13,6 +13,21 @@ export function setStateClass(s: GlobalState): void {
   globalState = s;
 }
 
+export function toast(title: string, message: string) {
+  // This is a weirdo self-invoking function, but it works.
+  return (() => {
+    try {
+      return server?.toaster.toast({
+        title: title,
+        body: message,
+        duration: 8000,
+      });
+    } catch (e) {
+      console.log("CSSLoader Toaster Error", e);
+    }
+  })();
+}
+
 export function resolve(promise: Promise<any>, setter: any) {
   (async function () {
     let data = await promise;
@@ -77,6 +92,14 @@ export async function fetchPackDb(): Promise<any> {
   return server!.fetchNoCors("https://api.deckthemes.com/themes/legacy/audio", {
     method: "GET",
   });
+}
+
+export function storeRead(key: string) {
+  return server!.callPluginMethod("store_read", { key: key });
+}
+
+export function storeWrite(key: string, value: string) {
+  return server!.callPluginMethod("store_write", { key: key, val: value });
 }
 
 export function downloadPack(uuid: string): Promise<any> {

@@ -1,19 +1,27 @@
-import { FC, Ref } from "react";
-import { PanelSectionRow, ButtonItem } from "decky-frontend-lib";
-import { motion } from "framer-motion";
+import { FC } from "react";
+import { PanelSectionRow, ButtonItem, Focusable } from "decky-frontend-lib";
+// import { motion } from "framer-motion";
 import { useGlobalState } from "../state/GlobalState";
-import { Pack, packDbEntry } from "../classes";
+import { Pack } from "../classes";
+import { PartialCSSThemeInfo, ThemeQueryRequest } from "../apiTypes";
+import { AiOutlineDownload } from "react-icons/ai";
 
 export const PackDisplayCard: FC<{
-  data: packDbEntry;
-  i: number;
-  installRef: Ref<number>;
-  downloadCallback: (e: packDbEntry, i: number) => void;
-}> = ({ data: e, i, installRef, downloadCallback }) => {
-  const { soundPacks, isInstalling } = useGlobalState();
-  function checkIfPackInstalled(themeObj: packDbEntry) {
+  data: PartialCSSThemeInfo;
+  refPassthrough?: any;
+  searchOpts: ThemeQueryRequest;
+  prevSearchOptsVarName: string;
+}> = ({
+  data: e,
+  refPassthrough = undefined,
+  searchOpts,
+  prevSearchOptsVarName,
+}) => {
+  const { soundPacks, isInstalling, apiUrl, setGlobalState } = useGlobalState();
+  function checkIfPackInstalled(themeObj: PartialCSSThemeInfo) {
     const filteredArr: Pack[] = soundPacks.filter(
-      (e: Pack) => e.name === themeObj.name && e.author === themeObj.author
+      (e: Pack) =>
+        e.name === themeObj.name && e.author === themeObj.specifiedAuthor
     );
     if (filteredArr.length > 0) {
       if (filteredArr[0].version === themeObj.version) {
@@ -26,11 +34,45 @@ export const PackDisplayCard: FC<{
     }
   }
 
+  function imageURLCreator(): string {
+    if (e?.images[0]?.id && e.images[0].id !== "MISSING") {
+      return `url(${apiUrl}/blobs/${e?.images[0].id})`;
+    } else {
+      return `url(https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Steam_Deck_logo_%28blue_background%29.svg/2048px-Steam_Deck_logo_%28blue_background%29.svg.png)`;
+    }
+  }
+
   const installStatus = checkIfPackInstalled(e);
   return (
     // The outer 2 most divs are the background darkened/blurred image, and everything inside is the text/image/buttons
-    <>
-      <div
+    <div style={{ position: "relative" }}>
+      {installStatus === "outdated" && (
+        <div
+          className="CssLoader_ThemeBrowser_SingleItem_NotifBubble"
+          style={{
+            position: "absolute",
+            top: "-5px",
+            left: "-5px",
+            padding: "4px 5px 2.5px",
+            fontSize: "0.5em",
+            background: "linear-gradient(135deg, #3a9bed, #235ecf)",
+            borderRadius: "50%",
+            // The focusRing has a z index of 10000, so this is just to be cheeky
+            zIndex: "10001",
+            boxShadow:
+              "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+          }}
+        >
+          <AiOutlineDownload />
+        </div>
+      )}
+      <Focusable
+        ref={refPassthrough}
+        onActivate={() => {
+          setGlobalState(prevSearchOptsVarName, searchOpts);
+          setGlobalState("currentExpandedTheme", e);
+        }}
+        focusWithinClassName="gpfocuswithin"
         className="AudioLoader_PackBrowser_SingleItem_Container1"
         style={{
           width: "100%",
@@ -60,9 +102,10 @@ export const PackDisplayCard: FC<{
           >
             <div
               style={{
-                background: e.music
-                  ? "url(https://i.imgur.com/nISGpci.png)"
-                  : "linear-gradient(150deg, rgba(0, 0, 0, 0) 0%, rgba(118, 118, 118, 0) 0%, rgba(255, 255, 255, 0.2) 32%, rgba(255, 255, 255, 0.2) 35%, rgba(255, 255, 255, 0.2) 38%, rgba(210, 210, 210, 0) 70%, rgba(0, 0, 0, 0) 100%) 0% 0% / cover",
+                background:
+                  e.target === "Music"
+                    ? "url(https://i.imgur.com/nISGpci.png)"
+                    : "linear-gradient(150deg, rgba(0, 0, 0, 0) 0%, rgba(118, 118, 118, 0) 0%, rgba(255, 255, 255, 0.2) 32%, rgba(255, 255, 255, 0.2) 35%, rgba(255, 255, 255, 0.2) 38%, rgba(210, 210, 210, 0) 70%, rgba(0, 0, 0, 0) 100%) 0% 0% / cover",
                 position: "absolute",
                 top: "10%",
                 left: "0",
@@ -75,7 +118,7 @@ export const PackDisplayCard: FC<{
             />
             <div
               style={{
-                backgroundImage: 'url("' + e.preview_image + '")',
+                backgroundImage: imageURLCreator(),
                 backgroundColor: "#21323d",
                 position: "absolute",
                 top: "10%",
@@ -87,35 +130,35 @@ export const PackDisplayCard: FC<{
                 borderRadius: "2px",
               }}
             />
-            <motion.div
+            <div
               // @ts-ignore - stupid "ref could be null" things here
-              animate={installRef.current === i ? { rotate: 360 } : {}}
-              exit={{}}
-              transition={{
-                // @ts-ignore
-                repeat: installRef.current === i ? Infinity : 0,
-                // @ts-ignore
-                duration: installRef.current === i ? 1.82 : 0.001,
-                ease: "linear",
-              }}
+              // animate={installRef.current === i ? { rotate: 360 } : {}}
+              // exit={{}}
+              // transition={{
+              //   // @ts-ignore
+              //   repeat: installRef.current === i ? Infinity : 0,
+              //   // @ts-ignore
+              //   duration: installRef.current === i ? 1.82 : 0.001,
+              //   ease: "linear",
+              // }}
               style={{
-                backgroundImage: e.music
-                  ? 'url("https://i.imgur.com/V9t3728.png")'
-                  : 'url("https://i.imgur.com/pWm35T0.png")',
+                backgroundImage:
+                  e.target === "Music"
+                    ? 'url("https://i.imgur.com/V9t3728.png")'
+                    : 'url("https://i.imgur.com/pWm35T0.png")',
                 position: "absolute",
                 top: "12.5%",
                 right: "0",
                 width: "75%",
                 height: "75%",
                 backgroundSize: "cover",
-                zIndex: 1,
-                rotate: 0,
+                // zIndex: 1,
+                // rotate: 0,
               }}
             />
           </div>
           <div
             style={{
-              width: "calc(100% - 220px)", // The calc is here so that the text section doesn't expand into the image
               display: "flex",
               flexDirection: "column",
               height: "100%",
@@ -146,7 +189,7 @@ export const PackDisplayCard: FC<{
                 textShadow: "rgb(48, 48, 48) 0px 0 10px",
               }}
             >
-              {e.author}
+              {e.specifiedAuthor}
             </span>
             <span
               className="AudioLoader_PackBrowser_SingleItem_ThemeTarget"
@@ -155,69 +198,11 @@ export const PackDisplayCard: FC<{
                 textShadow: "rgb(48, 48, 48) 0px 0 10px",
               }}
             >
-              {e.music ? "Music" : "Sound"} | {e.version}
+              {e.target} | {e.version}
             </span>
-            <span
-              className="AudioLoader_PackBrowser_SingleItem_DescriptionText"
-              style={{
-                fontSize: "13px",
-                textShadow: "rgb(48, 48, 48) 0px 0 10px",
-                color: "#969696",
-                WebkitLineClamp: "3",
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                display: "-webkit-box",
-              }}
-            >
-              {e.description ? (
-                e.description
-              ) : (
-                <span>
-                  <i style={{ color: "#666" }}>No description provided.</i>
-                </span>
-              )}
-            </span>
-
-            <div
-              className="AudioLoader_PackBrowser_SingleItem_InstallButtonContainer"
-              style={{
-                marginTop: "1em",
-                width: "245px",
-                overflow: "hidden",
-              }}
-            >
-              <PanelSectionRow>
-                <div
-                  className="AudioLoader_PackBrowser_SingleItem_InstallContainer"
-                  style={{
-                    // This padding here overrides the default padding put on PanelSectionRow's by Valve
-                    // Before this, I was using negative margin to "shrink" the element, but this is a much better solution
-                    paddingTop: "0px",
-                    paddingBottom: "0px",
-                  }}
-                >
-                  <ButtonItem
-                    bottomSeparator="none"
-                    layout="below"
-                    disabled={isInstalling || installStatus === "installed"}
-                    onClick={() => {
-                      downloadCallback(e, i);
-                    }}
-                  >
-                    <span className="AudioLoader_PackBrowser_SingleItem_InstallText">
-                      {installStatus === "outdated"
-                        ? "Update Available"
-                        : installStatus === "uninstalled"
-                        ? "Install"
-                        : "Installed"}
-                    </span>
-                  </ButtonItem>
-                </div>
-              </PanelSectionRow>
-            </div>
           </div>
         </div>
-      </div>
-    </>
+      </Focusable>
+    </div>
   );
 };
