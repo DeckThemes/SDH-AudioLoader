@@ -13,11 +13,10 @@ export const PackDisplayCard: FC<{
   const { soundPacks, isInstalling } = useGlobalState();
   function checkIfPackInstalled(themeObj: packDbEntry) {
     const filteredArr: Pack[] = soundPacks.filter(
-      (e: Pack) =>
-        e.data.name === themeObj.name && e.data.author === themeObj.author
+      (e: Pack) => e.name === themeObj.name && e.author === themeObj.author
     );
     if (filteredArr.length > 0) {
-      if (filteredArr[0].data.version === themeObj.version) {
+      if (filteredArr[0].version === themeObj.version) {
         return "installed";
       } else {
         return "outdated";

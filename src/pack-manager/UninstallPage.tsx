@@ -9,15 +9,12 @@ import { Pack } from "../classes";
 export const UninstallPage: VFC = () => {
   const {
     soundPacks,
-    setSoundPacks,
     activeSound,
-    setActiveSound,
     selectedMusic,
-    setSelectedMusic,
     menuMusic,
-    setMenuMusic,
     soundVolume,
     musicVolume,
+    setGlobalState,
   } = useGlobalState();
 
   const [isUninstalling, setUninstalling] = useState(false);
@@ -25,35 +22,33 @@ export const UninstallPage: VFC = () => {
   function fetchLocalPacks() {
     python.resolve(python.reloadPacksDir(), () => {
       python.resolve(python.getSoundPacks(), (data: any) => {
-        setSoundPacks(data);
+        setGlobalState("soundPacks", data);
       });
     });
   }
 
   function handleUninstall(listEntry: Pack) {
     setUninstalling(true);
-    python.resolve(python.deletePack(listEntry.data.name), () => {
+    python.resolve(python.deletePack(listEntry.name), () => {
       fetchLocalPacks();
-      if (
-        activeSound === listEntry.data.name ||
-        selectedMusic === listEntry.data.name
-      ) {
+      if (activeSound === listEntry.name || selectedMusic === listEntry.name) {
         console.log(
           "Audio Loader - Attempted to uninstall applied sound/music, changing applied packs to Default"
         );
-        if (activeSound === listEntry.data.name) setActiveSound("Default");
-        if (selectedMusic === listEntry.data.name) {
-          setSelectedMusic("None");
+        if (activeSound === listEntry.name)
+          setGlobalState("activeSound", "Default");
+        if (selectedMusic === listEntry.name) {
+          setGlobalState("selectedMusic", "None");
           if (menuMusic !== null) {
             menuMusic.StopPlayback();
-            setMenuMusic(null);
+            setGlobalState("menuMusic", null);
           }
         }
         const configObj = {
           selected_pack:
-            activeSound === listEntry.data.name ? "Default" : activeSound,
+            activeSound === listEntry.name ? "Default" : activeSound,
           selected_music:
-            selectedMusic === listEntry.data.name ? "None" : activeSound,
+            selectedMusic === listEntry.name ? "None" : activeSound,
           sound_volume: soundVolume,
           music_volume: musicVolume,
         };
@@ -74,11 +69,11 @@ export const UninstallPage: VFC = () => {
   return (
     <>
       {soundPacks
-        .sort((a, b) => a.data.name.localeCompare(b.data.name))
+        .sort((a, b) => a.name.localeCompare(b.name))
         .map((e: Pack) => (
           <PanelSectionRow>
             <ButtonItem
-              label={e.data.name}
+              label={e.name}
               onClick={() => handleUninstall(e)}
               disabled={isUninstalling}
             >

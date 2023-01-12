@@ -17,28 +17,22 @@ import { PackDisplayCard } from "../components";
 export const PackBrowserPage: VFC = () => {
   const {
     soundPacks,
-    setSoundPacks,
     browserPackList,
-    setBrowserPackList,
     searchFieldValue,
-    setSearchValue,
     selectedSort,
-    setSort,
     selectedTarget,
-    setTarget,
-    setInstalling,
+    setGlobalState,
   } = useGlobalState();
 
   const [backendVersion, setBackendVer] = useState<number>(2);
   function reloadBackendVer() {
     python.resolve(python.getBackendVersion(), setBackendVer);
-    console.log(backendVersion);
   }
 
   async function fetchPackDb() {
     python.resolve(python.fetchPackDb(), (response: any) => {
       if (response.body) {
-        setBrowserPackList(JSON.parse(response.body));
+        setGlobalState("browserPackList", JSON.parse(response.body));
       } else {
         console.log(
           "AudioLoader - Fetching PackDb Failed, no json string was returned by the fetch"
@@ -50,7 +44,7 @@ export const PackBrowserPage: VFC = () => {
   function fetchLocalPacks() {
     python.resolve(python.reloadPacksDir(), () => {
       python.resolve(python.getSoundPacks(), (data: any) => {
-        setSoundPacks(data);
+        setGlobalState("soundPacks", data);
       });
     });
   }
@@ -109,11 +103,10 @@ export const PackBrowserPage: VFC = () => {
 
   function checkIfPackInstalled(themeObj: packDbEntry) {
     const filteredArr: Pack[] = soundPacks.filter(
-      (e: Pack) =>
-        e.data.name === themeObj.name && e.data.author === themeObj.author
+      (e: Pack) => e.name === themeObj.name && e.author === themeObj.author
     );
     if (filteredArr.length > 0) {
-      if (filteredArr[0].data.version === themeObj.version) {
+      if (filteredArr[0].version === themeObj.version) {
         return "installed";
       } else {
         return "outdated";
@@ -126,11 +119,11 @@ export const PackBrowserPage: VFC = () => {
   const installRef = useRef(-1);
 
   function downloadCallback(e: packDbEntry, i: number) {
-    setInstalling(true);
+    setGlobalState("isInstalling", true);
     installRef.current = i;
     python.resolve(python.downloadPack(e.id), () => {
       fetchLocalPacks();
-      setInstalling(false);
+      setGlobalState("isInstalling", false);
       if (installRef.current === i) installRef.current = -1;
     });
   }
@@ -153,7 +146,7 @@ export const PackBrowserPage: VFC = () => {
               rgOptions={sortOptions}
               strDefaultLabel="Last Updated (Newest)"
               selectedOption={selectedSort}
-              onChange={(e) => setSort(e.data)}
+              onChange={(e) => setGlobalState("selectedSort", e.data)}
             />
           </div>
           <div
@@ -171,7 +164,7 @@ export const PackBrowserPage: VFC = () => {
               rgOptions={targetOptions}
               strDefaultLabel="All"
               selectedOption={selectedTarget.data}
-              onChange={(e) => setTarget(e)}
+              onChange={(e) => setGlobalState("selectedTarget", e)}
             />
           </div>
         </Focusable>
@@ -184,7 +177,9 @@ export const PackBrowserPage: VFC = () => {
             <TextField
               label="Search"
               value={searchFieldValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              onChange={(e) =>
+                setGlobalState("searchFieldValue", e.target.value)
+              }
             />
           </div>
           <DialogButton

@@ -28,18 +28,13 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
     activeSound,
     gamesRunning,
-    setActiveSound,
     soundPacks,
-    setSoundPacks,
     menuMusic,
-    setMenuMusic,
     selectedMusic,
-    setSelectedMusic,
     soundVolume,
-    setSoundVolume,
     musicVolume,
-    setMusicVolume,
     gainNode,
+    setGlobalState,
   } = useGlobalState();
 
   const [dummyFuncResult, setDummyResult] = useState<boolean>(false);
@@ -56,7 +51,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     if (menuMusic !== null) {
       menuMusic.pause();
       menuMusic.currentTime = 0;
-      setMenuMusic(null);
+      setGlobalState("menuMusic", null);
     }
     // This makes sure if you are in a game, music doesn't start playing
     if (newMusic !== "None" && gamesRunning.length === 0) {
@@ -69,19 +64,21 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         musicFileName = currentPack?.mappings["menu_music.mp3"][randIndex];
       }
       const newMenuMusic = new Audio(
-        `/sounds_custom/${currentPack?.path || "error"}/${musicFileName}`
+        `/sounds_custom/${
+          currentPack?.truncatedPackPath || "error"
+        }/${musicFileName}`
       );
       newMenuMusic.play();
       newMenuMusic.loop = true;
       newMenuMusic.volume = musicVolume;
-      setMenuMusic(newMenuMusic);
+      setGlobalState("menuMusic", newMenuMusic);
     }
   }
 
   function refetchLocalPacks() {
     python.resolve(python.reloadPacksDir(), () => {
       python.resolve(python.getSoundPacks(), (data: any) => {
-        setSoundPacks(data);
+        setGlobalState("soundPacks", data);
       });
     });
   }
@@ -91,7 +88,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       { label: "Default", data: -1 },
       ...soundPacks
         // Only shows sound packs
-        .filter((e) => !e.data.music)
+        .filter((e) => !e.music)
         .map((p, index) => ({ label: p.name, data: index }))
         // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
         .sort((a, b) => a.label.localeCompare(b.label)),
@@ -103,7 +100,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       { label: "None", data: -1 },
       ...soundPacks
         // Only show music packs
-        .filter((e) => e.data.music)
+        .filter((e) => e.music)
         .map((p, index) => ({ label: p.name, data: index }))
         // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
         .sort((a, b) => a.label.localeCompare(b.label)),
@@ -145,7 +142,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 ?.data ?? -1
             }
             onChange={async (option) => {
-              setActiveSound(option.label as string);
+              setGlobalState("activeSound", option.label as string);
 
               const configObj = {
                 selected_pack: option.label,
@@ -171,7 +168,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 gainNode.context.currentTime + 0.01
               );
               // gainNode.gain.value = value;
-              setSoundVolume(value);
+              setGlobalState("soundVolume", value);
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: selectedMusic,
@@ -194,7 +191,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 ?.data ?? -1
             }
             onChange={async (option) => {
-              setSelectedMusic(option.label as string);
+              setGlobalState("selectedMusic", option.label as string);
 
               const configObj = {
                 selected_pack: activeSound,
@@ -216,7 +213,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             max={1}
             step={0.01}
             onChange={(value) => {
-              setMusicVolume(value);
+              setGlobalState("musicVolume", value);
               menuMusic.volume = value;
               const configObj = {
                 selected_pack: activeSound,
@@ -301,18 +298,20 @@ export default definePlugin((serverApi: ServerAPI) => {
     "GetActiveDestination",
     function (_, ret) {
       const { soundVolume } = state.getPublicState();
+      const setGlobalState = state.setGlobalState.bind(state);
       // @ts-ignore
       const gainNode = new GainNode(this.context, { gain: soundVolume });
       gainNode.connect(ret);
       try {
-        state.setGainNode(gainNode);
+        setGlobalState("gainNode", gainNode);
       } catch (e) {
         console.log(e);
       }
       return gainNode;
     }
   );
-  state.setVolumePatchInstance(soundVolumePatchInstance);
+  const setGlobalState = state.setGlobalState.bind(state);
+  setGlobalState("volumePatchInstance", soundVolumePatchInstance);
 
   // The sound effect intercept/player
   // Needs to be stored in globalstate in order to unpatch
@@ -343,14 +342,14 @@ export default definePlugin((serverApi: ServerAPI) => {
             );
             const mappedFileName = currentPack?.mappings[soundName][randIndex];
             newSoundURL = `/sounds_custom/${
-              currentPack?.path || "/error"
+              currentPack?.truncatedPackPath || "/error"
             }/${mappedFileName}`;
             break;
           }
           // Default path-replacing behavior
           newSoundURL = args[0].replace(
             "sounds/",
-            `sounds_custom/${currentPack?.path || "/error"}/`
+            `sounds_custom/${currentPack?.truncatedPackPath || "/error"}/`
           );
           break;
       }
@@ -358,20 +357,23 @@ export default definePlugin((serverApi: ServerAPI) => {
       return [newSoundURL];
     }
   );
-  state.setSoundPatchInstance(patchInstance);
+  setGlobalState("soundPatchInstance", patchInstance);
 
   python.resolve(python.getSoundPacks(), (packs: any) => {
-    state.setSoundPacks(packs);
+    const setGlobalState = state.setGlobalState.bind(state);
+    console.log(packs);
+    setGlobalState("soundPacks", packs);
     // This is nested in here so that all data has loaded before it attempts to find audio paths
     python.resolve(python.getConfig(), (data: any) => {
       // This sets the config data in globalState
-      state.setActiveSound(data?.selected_pack || "Default");
       const configSelectedMusic = data?.selected_music || "None";
-      state.setSelectedMusic(configSelectedMusic);
       const configSoundVolume = data?.sound_volume ?? 1;
-      state.setSoundVolume(configSoundVolume);
       const configMusicVolume = data?.music_volume ?? 0.5;
-      state.setMusicVolume(configMusicVolume);
+
+      setGlobalState("activeSound", data?.selected_pack || "Default");
+      setGlobalState("selectedMusic", configSelectedMusic);
+      setGlobalState("soundVolume", configSoundVolume);
+      setGlobalState("musicVolume", configMusicVolume);
 
       // Plays menu music initially
       // TODO: Add check if game is currently running
@@ -390,13 +392,15 @@ export default definePlugin((serverApi: ServerAPI) => {
           musicFileName = currentPack?.mappings["menu_music.mp3"][randIndex];
         }
         menuMusic = new Audio(
-          `/sounds_custom/${currentPack?.path || "error"}/${musicFileName}`
+          `/sounds_custom/${
+            currentPack?.truncatedPackPath || "error"
+          }/${musicFileName}`
         );
         menuMusic.play();
         menuMusic.loop = true;
         menuMusic.volume = configMusicVolume;
         console.log("play and loop ran", menuMusic);
-        state.setMenuMusic(menuMusic);
+        setGlobalState("menuMusic", menuMusic);
       }
     });
   });
@@ -413,17 +417,20 @@ export default definePlugin((serverApi: ServerAPI) => {
           gamesRunning,
           musicVolume,
         } = state.getPublicState();
+        const setGlobalState = state.setGlobalState.bind(state);
         if (selectedMusic !== "None") {
           if (update.bRunning) {
             // Because gamesRunning is in globalState, array methods like push and splice don't work
-            state.setGamesRunning([...gamesRunning, update.unAppID]);
+            setGlobalState("gamesRunning", [...gamesRunning, update.unAppID]);
             if (menuMusic != null) {
               menuMusic.pause();
               menuMusic.currentTime = 0;
-              state.setMenuMusic(null);
+              setGlobalState("menuMusic", null);
             }
           } else {
-            state.setGamesRunning(
+            // This happens when an app is closed
+            setGlobalState(
+              "gamesRunning",
               gamesRunning.filter((e) => e !== update.unAppID)
             );
 
@@ -447,14 +454,14 @@ export default definePlugin((serverApi: ServerAPI) => {
               }
               const newMenuMusic = new Audio(
                 `/sounds_custom/${
-                  currentMusic?.path || "error"
+                  currentMusic?.truncatedPackPath || "error"
                 }/${musicFileName}`
               );
               newMenuMusic.play();
               newMenuMusic.loop = true;
               newMenuMusic.volume = musicVolume;
               // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
-              state.setMenuMusic(newMenuMusic);
+              setGlobalState("menuMusic", newMenuMusic);
             }
           }
         }
@@ -478,10 +485,11 @@ export default definePlugin((serverApi: ServerAPI) => {
     onDismount: () => {
       const { menuMusic, soundPatchInstance, volumePatchInstance } =
         state.getPublicState();
+      const setGlobalState = state.setGlobalState.bind(state);
       if (menuMusic != null) {
         menuMusic.pause();
         menuMusic.currentTime = 0;
-        state.setMenuMusic(null);
+        setGlobalState("menuMusic", null);
       }
       soundPatchInstance.unpatch();
       volumePatchInstance.unpatch();

@@ -23,21 +23,8 @@ interface PublicGlobalState {
 // The localThemeEntry interface refers to the theme data as given by the python function, the Theme class refers to a theme after it has been formatted and the generate function has been added
 
 interface PublicGlobalStateContext extends PublicGlobalState {
-  setMenuMusic(value: any): void;
-  setSoundPatchInstance(value: any): void;
-  setVolumePatchInstance(value: any): void;
-  setGainNode(value: any): void;
-  setSoundVolume(value: number): void;
-  setMusicVolume(value: number): void;
-  setGamesRunning(value: Number[]): void;
-  setActiveSound(value: string): void;
-  setSoundPacks(packArr: Pack[]): void;
-  setSelectedMusic(value: string): void;
-  setBrowserPackList(packArr: packDbEntry[]): void;
-  setSearchValue(value: string): void;
-  setSort(value: number): void;
-  setTarget(value: SingleDropdownOption): void;
-  setInstalling(bool: boolean): void;
+  setGlobalState(key: string, data: any): void;
+  getGlobalState(key: string): any;
 }
 
 // This class creates the getter and setter functions for all of the global state data.
@@ -84,87 +71,12 @@ export class GlobalState {
     };
   }
 
-  setMenuMusic(value: any) {
-    this.menuMusic = value;
-    this.forceUpdate();
+  getGlobalState(key: string) {
+    return this[key];
   }
 
-  setSoundPatchInstance(value: any) {
-    this.soundPatchInstance = value;
-    this.forceUpdate();
-  }
-
-  setVolumePatchInstance(value: any) {
-    this.volumePatchInstance = value;
-    this.forceUpdate();
-  }
-
-  setGainNode(value: any) {
-    this.gainNode = value;
-    this.forceUpdate();
-  }
-
-  setSoundVolume(value: any) {
-    this.soundVolume = value;
-    this.forceUpdate();
-  }
-
-  setMusicVolume(value: any) {
-    this.musicVolume = value;
-    this.forceUpdate();
-  }
-
-  setGamesRunning(gameArr: Number[]) {
-    this.gamesRunning = gameArr;
-    this.forceUpdate();
-  }
-
-  setActiveSound(value: string) {
-    this.activeSound = value;
-    this.forceUpdate();
-  }
-
-  setSoundPacks(packArr: Pack[]) {
-    // This formats the raw data grabbed by python into the Pack class format
-    let list: Pack[] = [];
-    packArr.forEach((e: any) => {
-      let entry = new Pack();
-      entry.data = e;
-      list.push(entry);
-    });
-    list.forEach((e) => e.init());
-
-    this.soundPacks = list;
-    this.forceUpdate();
-  }
-
-  setSelectedMusic(value: string) {
-    this.selectedMusic = value;
-    this.forceUpdate();
-  }
-
-  setBrowserPackList(packArr: packDbEntry[]) {
-    this.browserPackList = packArr;
-    this.forceUpdate();
-  }
-
-  setSearchValue(value: string) {
-    this.searchFieldValue = value;
-    this.forceUpdate();
-  }
-
-  setSort(value: number) {
-    this.selectedSort = value;
-    this.forceUpdate();
-  }
-
-  setTarget(value: SingleDropdownOption) {
-    this.selectedTarget = value;
-    this.forceUpdate();
-  }
-
-  setInstalling(bool: boolean) {
-    this.isInstalling = bool;
+  setGlobalState(key: string, data: any) {
+    this[key] = data;
     this.forceUpdate();
   }
 
@@ -200,52 +112,16 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
       globalStateClass.eventBus.removeEventListener("stateUpdate", onUpdate);
   }, []);
 
-  const setMenuMusic = (value: any) => globalStateClass.setMenuMusic(value);
-  const setSoundPatchInstance = (value: any) =>
-    globalStateClass.setSoundPatchInstance(value);
-  const setVolumePatchInstance = (value: any) =>
-    globalStateClass.setVolumePatchInstance(value);
-  const setGainNode = (value: any) => globalStateClass.setGainNode(value);
-  const setSoundVolume = (value: number) =>
-    globalStateClass.setSoundVolume(value);
-  const setMusicVolume = (value: number) =>
-    globalStateClass.setMusicVolume(value);
-  const setGamesRunning = (gameArr: Number[]) =>
-    globalStateClass.setGamesRunning(gameArr);
-  const setActiveSound = (value: string) =>
-    globalStateClass.setActiveSound(value);
-  const setSoundPacks = (packArr: Pack[]) =>
-    globalStateClass.setSoundPacks(packArr);
-  const setSelectedMusic = (value: string) =>
-    globalStateClass.setSelectedMusic(value);
-  const setBrowserPackList = (packArr: packDbEntry[]) =>
-    globalStateClass.setBrowserPackList(packArr);
-  const setSearchValue = (value: string) =>
-    globalStateClass.setSearchValue(value);
-  const setSort = (value: number) => globalStateClass.setSort(value);
-  const setTarget = (value: SingleDropdownOption) =>
-    globalStateClass.setTarget(value);
-  const setInstalling = (bool: boolean) => globalStateClass.setInstalling(bool);
+  const getGlobalState = (key: string) => globalStateClass.getGlobalState(key);
+  const setGlobalState = (key: string, data: any) =>
+    globalStateClass.setGlobalState(key, data);
 
   return (
     <GlobalStateContext.Provider
       value={{
         ...publicState,
-        setMenuMusic,
-        setSoundPatchInstance,
-        setVolumePatchInstance,
-        setGainNode,
-        setSoundVolume,
-        setMusicVolume,
-        setGamesRunning,
-        setActiveSound,
-        setSoundPacks,
-        setSelectedMusic,
-        setBrowserPackList,
-        setSearchValue,
-        setSort,
-        setTarget,
-        setInstalling,
+        getGlobalState,
+        setGlobalState,
       }}
     >
       {children}

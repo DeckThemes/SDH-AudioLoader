@@ -115,7 +115,7 @@ class RemoteInstall:
         return Result(True)
 
 class Pack:
-    def __init__(self, packPath : str, json : dict):
+    def __init__(self, packPath : str, json : dict, truncatedPackPath: str):
         self.name = json["name"]
         self.description = json["description"] if ("description" in json) else ""
         self.version = json["version"] if ("version" in json) else "v1.0"
@@ -129,6 +129,7 @@ class Pack:
             raise Exception("Audio Loader - {} requires Audio Loader version {} but only version {} is installed".format(self.name, self.require, AUDIO_LOADER_VERSION))
         
         self.packPath = packPath
+        self.truncatedPackPath = truncatedPackPath
 
     async def delete(self) -> Result:
         try:
@@ -147,7 +148,8 @@ class Pack:
             "ignore": self.ignore,
             "mappings": self.mappings,
             "music": self.music,
-            "packPath": self.packPath
+            "packPath": self.packPath,
+            "truncatedPackPath": self.truncatedPackPath
         }
 
 class Plugin:
@@ -223,7 +225,7 @@ class Plugin:
                 with open(packDataPath, "r") as f:
                     pack = json.load(f)
                 
-                packData = Pack(packPath, pack)
+                packData = Pack(packPath, pack, p)
 
                 if (packData.name not in [p.name for p in self.soundPacks]):
                     self.soundPacks.append(packData)
