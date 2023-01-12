@@ -3,6 +3,7 @@ import { createContext, FC, useContext, useEffect, useState } from "react";
 import { Pack, packDbEntry } from "../classes";
 
 interface PublicGlobalState {
+  dummyFuncResult: boolean;
   menuMusic: any;
   soundPatchInstance: any;
   volumePatchInstance: any;
@@ -29,6 +30,7 @@ interface PublicGlobalStateContext extends PublicGlobalState {
 
 // This class creates the getter and setter functions for all of the global state data.
 export class GlobalState {
+  private dummyFuncResult: boolean = false;
   private menuMusic: any = null;
   private soundPatchInstance: any = null;
   private volumePatchInstance: any = null;
@@ -53,6 +55,7 @@ export class GlobalState {
 
   getPublicState() {
     return {
+      dummyFuncResult: this.dummyFuncResult,
       menuMusic: this.menuMusic,
       soundPatchInstance: this.soundPatchInstance,
       volumePatchInstance: this.volumePatchInstance,

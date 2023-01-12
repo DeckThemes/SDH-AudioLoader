@@ -1,25 +1,3 @@
-// export class Pack {
-//   data: any;
-//   name: string = "";
-//   description: string = "";
-//   path: string = "";
-//   ignore: DeckSound[] = [];
-//   mappings: Mappings = {};
-//   version: string = "v1.0";
-//   author: string = "";
-
-//   // This init function is called by the setter function in GlobalState
-//   init() {
-//     this.name = this.data.name;
-//     this.description = this.data.description;
-//     this.path = this.data.packPath.split("/").pop();
-//     this.ignore = this.data.ignore;
-//     this.mappings = this.data.mappings;
-//     this.version = this.data.version;
-//     this.author = this.data.author;
-//   }
-// }
-
 export interface Pack {
   name: string;
   description: string;
@@ -27,8 +5,8 @@ export interface Pack {
   mappings: Mappings;
   version: string;
   author: string;
-  packPath: string;
-  truncatedPackPath: string;
+  packPath: string; // This contains the full path from root to the pack
+  truncatedPackPath: string; // This is the relative path from ~/homebrew/sounds
   music: boolean;
 }
 

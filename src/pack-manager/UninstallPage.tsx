@@ -19,18 +19,10 @@ export const UninstallPage: VFC = () => {
 
   const [isUninstalling, setUninstalling] = useState(false);
 
-  function fetchLocalPacks() {
-    python.resolve(python.reloadPacksDir(), () => {
-      python.resolve(python.getSoundPacks(), (data: any) => {
-        setGlobalState("soundPacks", data);
-      });
-    });
-  }
-
   function handleUninstall(listEntry: Pack) {
     setUninstalling(true);
     python.resolve(python.deletePack(listEntry.name), () => {
-      fetchLocalPacks();
+      python.resetAndReloadPacks();
       if (activeSound === listEntry.name || selectedMusic === listEntry.name) {
         console.log(
           "Audio Loader - Attempted to uninstall applied sound/music, changing applied packs to Default"

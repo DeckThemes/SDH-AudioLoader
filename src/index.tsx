@@ -34,17 +34,12 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     soundVolume,
     musicVolume,
     gainNode,
+    dummyFuncResult,
     setGlobalState,
   } = useGlobalState();
 
-  const [dummyFuncResult, setDummyResult] = useState<boolean>(false);
-
-  function dummyFuncTest() {
-    python.resolve(python.dummyFunction(), setDummyResult);
-  }
-
   useEffect(() => {
-    dummyFuncTest();
+    python.dummyFuncTest();
   }, []);
 
   function restartMusicPlayer(newMusic: string) {
@@ -76,11 +71,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   }
 
   function refetchLocalPacks() {
-    python.resolve(python.reloadPacksDir(), () => {
-      python.resolve(python.getSoundPacks(), (data: any) => {
-        setGlobalState("soundPacks", data);
-      });
-    });
+    python.resetAndReloadPacks();
   }
 
   const SoundPackDropdownOptions = useMemo(() => {
@@ -288,9 +279,12 @@ const PackManagerRouter: VFC = () => {
 };
 
 export default definePlugin((serverApi: ServerAPI) => {
-  python.setServer(serverApi);
   const state: GlobalState = new GlobalState();
+  python.setServer(serverApi);
+  python.setStateClass(state);
   let menuMusic: any = null;
+
+  console.log("test");
 
   // Big thanks to AA and Mintexists for help finding this
   const soundVolumePatchInstance = afterPatch(
@@ -359,11 +353,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   );
   setGlobalState("soundPatchInstance", patchInstance);
 
-  python.resolve(python.getSoundPacks(), (packs: any) => {
-    const setGlobalState = state.setGlobalState.bind(state);
-    console.log(packs);
-    setGlobalState("soundPacks", packs);
-    // This is nested in here so that all data has loaded before it attempts to find audio paths
+  python.getAndSetSoundPacks().then(() => {
     python.resolve(python.getConfig(), (data: any) => {
       // This sets the config data in globalState
       const configSelectedMusic = data?.selected_music || "None";

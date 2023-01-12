@@ -42,11 +42,7 @@ export const PackBrowserPage: VFC = () => {
   }
 
   function fetchLocalPacks() {
-    python.resolve(python.reloadPacksDir(), () => {
-      python.resolve(python.getSoundPacks(), (data: any) => {
-        setGlobalState("soundPacks", data);
-      });
-    });
+    python.resetAndReloadPacks();
   }
 
   function reloadPacks() {
