@@ -1,9 +1,11 @@
 import json, tempfile, asyncio
 import shutil
-import os
+import os, sys
 from logging import getLogger
 
-from utils import store_read as util_store_read, store_write as util_store_write
+sys.path.append(os.path.dirname(__file__))
+
+from audio_store import store_read as util_store_read, store_write as util_store_write
 
 starter_config_data = {
   "selected_pack": "Default",
