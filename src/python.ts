@@ -63,7 +63,7 @@ export function getAndSetSoundPacks(): Promise<any> {
 }
 
 // getSoundPacks just fetches the packs already stored in python memory, you need to call this reload function to re-fetch the folder list
-export function resetAndReloadPacks(): Promise<void> {
+export function reloadBackend(): Promise<void> {
   return server!
     .callPluginMethod("parse_packs", {
       packsDir: "/home/deck/homebrew/sounds",
@@ -91,6 +91,14 @@ export async function getBackendVersion(): Promise<any> {
 export async function fetchPackDb(): Promise<any> {
   return server!.fetchNoCors("https://api.deckthemes.com/themes/legacy/audio", {
     method: "GET",
+  });
+}
+
+export function downloadThemeFromUrl(themeId: string): Promise<any> {
+  const { apiUrl } = globalState!.getPublicState();
+  return server!.callPluginMethod("download_theme_from_url", {
+    id: themeId,
+    url: apiUrl,
   });
 }
 

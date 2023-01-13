@@ -17,7 +17,14 @@ import { VFC, useMemo, useEffect } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import { FaVolumeUp, FaMusic } from "react-icons/fa";
 import { AudioParent } from "./gamepadAudioFinder";
-import { UninstallPage, SettingsPage } from "./pack-manager";
+import {
+  UninstallPage,
+  SettingsPage,
+  StarredPacksPage,
+  SubmissionsPage,
+  PackBrowserPage,
+  ExpandedViewPage,
+} from "./pack-manager";
 import * as python from "./python";
 import * as api from "./api";
 import {
@@ -25,7 +32,6 @@ import {
   GlobalStateContextProvider,
   useGlobalState,
 } from "./state/GlobalState";
-import { ThemeBrowserPage } from "./pack-manager/ThemeBrowserPage";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
@@ -74,7 +80,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   }
 
   function refetchLocalPacks() {
-    python.resetAndReloadPacks();
+    python.reloadBackend();
   }
 
   const SoundPackDropdownOptions = useMemo(() => {
@@ -263,21 +269,21 @@ const PackManagerRouter: VFC = () => {
         tabs={[
           {
             title: "Browse",
-            content: <ThemeBrowserPage />,
+            content: <PackBrowserPage />,
             id: "BrowsePacks",
           },
           ...(!!apiMeData
             ? [
                 {
                   title: "Starred Themes",
-                  content: <ThemeBrowserPage />,
+                  content: <StarredPacksPage />,
                   id: "StarredPacks",
                 },
                 ...(apiMeData.permissions.includes(Permissions.viewSubs)
                   ? [
                       {
                         title: "Submissions",
-                        content: <ThemeBrowserPage />,
+                        content: <SubmissionsPage />,
                         id: "AudioSubmissions",
                       },
                     ]
@@ -308,7 +314,11 @@ export default definePlugin((serverApi: ServerAPI) => {
   api.setStateClass(state);
   let menuMusic: any = null;
 
-  console.log("test");
+  python.resolve(python.storeRead("shortToken"), (token: string) => {
+    if (token) {
+      state.setGlobalState("apiShortToken", token);
+    }
+  });
 
   // Big thanks to AA and Mintexists for help finding this
   const soundVolumePatchInstance = afterPatch(
@@ -485,6 +495,12 @@ export default definePlugin((serverApi: ServerAPI) => {
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
     <GlobalStateContextProvider globalStateClass={state}>
       <PackManagerRouter />
+    </GlobalStateContextProvider>
+  ));
+
+  serverApi.routerHook.addRoute("/pack-manager-expanded-view", () => (
+    <GlobalStateContextProvider globalStateClass={state}>
+      <ExpandedViewPage />
     </GlobalStateContextProvider>
   ));
 

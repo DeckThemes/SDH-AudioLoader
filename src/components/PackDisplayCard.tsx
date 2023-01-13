@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { PanelSectionRow, ButtonItem, Focusable } from "decky-frontend-lib";
+import { Focusable, Router } from "decky-frontend-lib";
 // import { motion } from "framer-motion";
 import { useGlobalState } from "../state/GlobalState";
 import { Pack } from "../classes";
@@ -17,7 +17,7 @@ export const PackDisplayCard: FC<{
   searchOpts,
   prevSearchOptsVarName,
 }) => {
-  const { soundPacks, isInstalling, apiUrl, setGlobalState } = useGlobalState();
+  const { soundPacks, apiUrl, setGlobalState } = useGlobalState();
   function checkIfPackInstalled(themeObj: PartialCSSThemeInfo) {
     const filteredArr: Pack[] = soundPacks.filter(
       (e: Pack) =>
@@ -71,14 +71,15 @@ export const PackDisplayCard: FC<{
         onActivate={() => {
           setGlobalState(prevSearchOptsVarName, searchOpts);
           setGlobalState("currentExpandedTheme", e);
+          Router.Navigate("/pack-manager-expanded-view");
         }}
         focusWithinClassName="gpfocuswithin"
         className="AudioLoader_PackBrowser_SingleItem_Container1"
         style={{
-          width: "100%",
-          marginLeft: "10px",
-          marginRight: "10px",
-          marginBottom: "20px",
+          width: "220px",
+          background: "rgba(0,0,0,0.5)",
+          borderRadius: "1em",
+          padding: "1em",
         }}
       >
         <div
@@ -87,6 +88,7 @@ export const PackDisplayCard: FC<{
             // Really this could be combined with the above div, its just that in CSSLoader there's 2 here, and I didn't want to merge them because its 1am
             width: "100%",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             height: "100%",
           }}
@@ -161,8 +163,7 @@ export const PackDisplayCard: FC<{
             style={{
               display: "flex",
               flexDirection: "column",
-              height: "100%",
-              marginLeft: "1em",
+              width: "100%",
               justifyContent: "center",
             }}
           >
@@ -171,11 +172,11 @@ export const PackDisplayCard: FC<{
               style={{
                 fontSize: "1.25em",
                 fontWeight: "bold",
+                textAlign: "center",
                 // This stuff here truncates it if it's too long (prolly not gonna happen on audioloader, just code from cssloader)
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                width: "90%",
               }}
             >
               {e.name}
@@ -183,22 +184,13 @@ export const PackDisplayCard: FC<{
             <span
               className="AudioLoader_PackBrowser_SingleItem_AuthorText"
               style={{
-                marginRight: "auto",
                 fontSize: "1em",
+                textAlign: "center",
                 // The text shadows are leftover from cssloader, you can experiment with removing them if you want
                 textShadow: "rgb(48, 48, 48) 0px 0 10px",
               }}
             >
-              {e.specifiedAuthor}
-            </span>
-            <span
-              className="AudioLoader_PackBrowser_SingleItem_ThemeTarget"
-              style={{
-                fontSize: "1em",
-                textShadow: "rgb(48, 48, 48) 0px 0 10px",
-              }}
-            >
-              {e.target} | {e.version}
+              {e.specifiedAuthor} | {e.target} | {e.version}
             </span>
           </div>
         </div>

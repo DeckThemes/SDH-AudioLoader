@@ -22,7 +22,7 @@ export const UninstallPage: VFC = () => {
   function handleUninstall(listEntry: Pack) {
     setUninstalling(true);
     python.resolve(python.deletePack(listEntry.name), () => {
-      python.resetAndReloadPacks();
+      python.reloadBackend();
       if (activeSound === listEntry.name || selectedMusic === listEntry.name) {
         console.log(
           "Audio Loader - Attempted to uninstall applied sound/music, changing applied packs to Default"

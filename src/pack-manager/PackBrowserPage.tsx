@@ -11,10 +11,9 @@ import {
   BrowserSearchFields,
   LoadMoreButton,
   PackDisplayCard,
-  VariableSizeCard,
 } from "../components";
 
-export const ThemeBrowserPage: FC = () => {
+export const PackBrowserPage: FC = () => {
   const {
     browseThemeList: themeArr,
     themeSearchOpts: searchOpts,
@@ -24,7 +23,7 @@ export const ThemeBrowserPage: FC = () => {
     prevSearchOpts,
   } = useGlobalState();
 
-  const [backendVersion, setBackendVer] = useState<number>(5);
+  const [backendVersion, setBackendVer] = useState<number>(2);
   function reloadBackendVer() {
     python.resolve(python.getBackendVersion(), setBackendVer);
   }
@@ -32,7 +31,7 @@ export const ThemeBrowserPage: FC = () => {
   function reloadThemes() {
     reloadBackendVer();
     getThemes(searchOpts, "/themes", "browseThemeList", setSnapIndex);
-    python.resetAndReloadPacks();
+    python.reloadBackend();
   }
 
   useEffect(() => {
