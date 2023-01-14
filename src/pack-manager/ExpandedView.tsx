@@ -73,6 +73,8 @@ export const ExpandedViewPage: VFC = () => {
     }
   }
 
+  console.log("console.log(Navigation)", Navigation);
+
   function installTheme() {
     setGlobalState("isInstalling", true);
     python.resolve(

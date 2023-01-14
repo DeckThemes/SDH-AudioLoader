@@ -105,7 +105,7 @@ class Plugin:
     async def get_sound_packs(self) -> list:
         return [x.to_dict() for x in self.soundPacks]
 
-    async def download_pack_from_url(self, id : str, url : str) -> dict:
+    async def download_theme_from_url(self, id : str, url : str) -> dict:
         return (await install(id, url)).to_dict()
 
     async def get_config(self) -> object:
