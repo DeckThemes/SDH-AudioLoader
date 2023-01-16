@@ -8,6 +8,7 @@ export interface Pack {
   packPath: string; // This contains the full path from root to the pack
   truncatedPackPath: string; // This is the relative path from ~/homebrew/sounds
   music: boolean;
+  id: string;
 }
 
 export interface packDbEntry {

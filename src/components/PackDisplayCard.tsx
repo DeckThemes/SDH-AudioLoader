@@ -51,10 +51,10 @@ export const PackDisplayCard: FC<{
           className="CssLoader_ThemeBrowser_SingleItem_NotifBubble"
           style={{
             position: "absolute",
-            top: "-5px",
-            left: "-5px",
-            padding: "4px 5px 2.5px",
-            fontSize: "0.5em",
+            top: "-10px",
+            left: "-10px",
+            padding: "5px 8px 2.5px 8px",
+            fontSize: "1em",
             background: "linear-gradient(135deg, #3a9bed, #235ecf)",
             borderRadius: "50%",
             // The focusRing has a z index of 10000, so this is just to be cheeky

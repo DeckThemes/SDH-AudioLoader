@@ -67,6 +67,7 @@ class Pack:
         self.ignore = json["ignore"] if ("ignore" in json) else []
         self.mappings = json["mappings"] if ("mappings" in json) else {}
         self.music = bool(json["music"]) if ("music" in json) else False
+        self.id = json["id"] if ("id" in json) else self.name
 
         if (AUDIO_LOADER_VERSION < self.require):
             raise Exception("Audio Loader - {} requires Audio Loader version {} but only version {} is installed".format(self.name, self.require, AUDIO_LOADER_VERSION))
@@ -92,7 +93,8 @@ class Pack:
             "mappings": self.mappings,
             "music": self.music,
             "packPath": self.packPath,
-            "truncatedPackPath": self.truncatedPackPath
+            "truncatedPackPath": self.truncatedPackPath,
+            "id": self.id
         }
 
 class Plugin:
