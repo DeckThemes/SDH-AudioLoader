@@ -8,7 +8,7 @@ specifiers:
   '@rollup/plugin-typescript': ^8.3.3
   '@types/react': 16.14.0
   '@types/webpack': ^5.28.0
-  decky-frontend-lib: 3.7.12
+  decky-frontend-lib: ^3.18.10
   framer-motion: ^7.2.0
   react-icons: ^4.4.0
   rollup: ^2.77.1
@@ -19,7 +19,7 @@ specifiers:
   typescript: ^4.7.4
 
 dependencies:
-  decky-frontend-lib: 3.7.12
+  decky-frontend-lib: 3.18.10
   framer-motion: 7.10.3
   react-icons: 4.7.1
 
@@ -693,8 +693,8 @@ packages:
     resolution: {integrity: sha512-DJR/VvkAvSZW9bTouZue2sSxDwdTN92uHjqeKVm+0dAqdfNykRzQ95tay8aXMBAAPpUiq4Qcug2L7neoRh2Egw==}
     dev: true
 
-  /decky-frontend-lib/3.7.12:
-    resolution: {integrity: sha512-whDV9zHuEBFj17zKoT51aRcUxLvSzBNu2lc242/EO9aFFP064FVCrJu+r7CxWe0hlQ7sA4FKX1qgCwsZ6H+PZg==}
+  /decky-frontend-lib/3.18.10:
+    resolution: {integrity: sha512-2mgbA3sSkuwQR/FnmhXVrcW6LyTS95IuL6muJAmQCruhBvXapDtjk1TcgxqMZxFZwGD1IPnemPYxHZll6IgnZw==}
     dev: false
 
   /decode-uri-component/0.2.2:
