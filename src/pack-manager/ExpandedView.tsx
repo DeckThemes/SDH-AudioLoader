@@ -193,6 +193,18 @@ export const ExpandedViewPage: VFC = () => {
           marginTop: "40px",
         }}
       >
+        <style>
+          {`
+            @keyframes spin {
+              to {
+                transform: rotate(360deg);
+              }
+            }
+            .spinny {
+              animation: spin 1s linear infinite;
+            }
+          `}
+        </style>
         <div
           style={{
             display: "flex",
@@ -204,27 +216,62 @@ export const ExpandedViewPage: VFC = () => {
             style={{
               display: "flex",
               marginBottom: "8px",
+              justifyContent: "space-between",
             }}
           >
             <div
+              // I'm still using the format of div-with-a-bg-image, because I think that could make it a bit easier to add icons/text in front if we want
+              className="AudioLoader_PackBrowser_SingleItem_PreviewImageContainer"
               style={{
-                backgroundImage: `url(${imageUrl})`,
-                backgroundSize: "contain",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center",
-                width: "60%",
+                width: "400px",
+                height: "320px",
+                position: "relative",
               }}
-            />
-            {/* This is the old way images were handled, but it had cropping issues, I do want to revisit it eventually though */}
-            {/* <img
-              className="CssLoader_ThemeBrowser_ExpandedView_PreviewImage"
-              src={imageUrl}
-              style={{
-                maxHeight: "400px",
-                width: "60%",
-                display: "none",
-              }}
-            /> */}
+            >
+              <div
+                style={{
+                  background:
+                    fullThemeData.target === "Music"
+                      ? "url(https://i.imgur.com/nISGpci.png)"
+                      : "linear-gradient(150deg, rgba(0, 0, 0, 0) 0%, rgba(118, 118, 118, 0) 0%, rgba(255, 255, 255, 0.2) 32%, rgba(255, 255, 255, 0.2) 35%, rgba(255, 255, 255, 0.2) 38%, rgba(210, 210, 210, 0) 70%, rgba(0, 0, 0, 0) 100%) 0% 0% / cover",
+                  position: "absolute",
+                  left: "0",
+                  width: "80%",
+                  height: "100%",
+                  backgroundSize: "cover",
+                  zIndex: 3,
+                  borderRadius: "2px",
+                }}
+              />
+              <div
+                style={{
+                  backgroundImage: `url(${imageUrl})`,
+                  backgroundColor: "#21323d",
+                  position: "absolute",
+                  left: "0",
+                  width: "80%",
+                  height: "100%",
+                  backgroundSize: "cover",
+                  zIndex: 2,
+                  borderRadius: "2px",
+                }}
+              />
+              <div
+                className={isInstalling ? "spinny" : ""}
+                style={{
+                  backgroundImage:
+                    fullThemeData.target === "Music"
+                      ? 'url("https://i.imgur.com/V9t3728.png")'
+                      : 'url("https://i.imgur.com/pWm35T0.png")',
+                  position: "absolute",
+                  top: "2.5%",
+                  right: "0",
+                  width: "75%",
+                  height: "95%",
+                  backgroundSize: "contain",
+                }}
+              />
+            </div>
             <div
               style={{
                 width: "40%",

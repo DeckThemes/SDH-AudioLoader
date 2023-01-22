@@ -1,6 +1,5 @@
 import { FC } from "react";
 import { Focusable, Router } from "decky-frontend-lib";
-// import { motion } from "framer-motion";
 import { useGlobalState } from "../state/GlobalState";
 import { Pack } from "../classes";
 import { PartialCSSThemeInfo, ThemeQueryRequest } from "../apiTypes";
@@ -133,16 +132,6 @@ export const PackDisplayCard: FC<{
               }}
             />
             <div
-              // @ts-ignore - stupid "ref could be null" things here
-              // animate={installRef.current === i ? { rotate: 360 } : {}}
-              // exit={{}}
-              // transition={{
-              //   // @ts-ignore
-              //   repeat: installRef.current === i ? Infinity : 0,
-              //   // @ts-ignore
-              //   duration: installRef.current === i ? 1.82 : 0.001,
-              //   ease: "linear",
-              // }}
               style={{
                 backgroundImage:
                   e.target === "Music"
@@ -154,8 +143,6 @@ export const PackDisplayCard: FC<{
                 width: "75%",
                 height: "75%",
                 backgroundSize: "cover",
-                // zIndex: 1,
-                // rotate: 0,
               }}
             />
           </div>
