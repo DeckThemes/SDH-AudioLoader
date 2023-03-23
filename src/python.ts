@@ -57,7 +57,6 @@ export function getAndSetSoundPacks(): Promise<any> {
     .callPluginMethod<{}, Pack[]>("get_sound_packs", {})
     .then((data) => {
       if (data.success) {
-        console.log(data.result);
         setGlobalState("soundPacks", data.result);
       }
     });

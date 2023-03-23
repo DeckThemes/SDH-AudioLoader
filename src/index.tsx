@@ -51,8 +51,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     python.dummyFuncTest();
   }, []);
 
-  console.log(soundPacks);
-
   function restartMusicPlayer(newMusic: string) {
     if (menuMusic !== null) {
       menuMusic.pause();
