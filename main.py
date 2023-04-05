@@ -1,12 +1,7 @@
 import json, tempfile, asyncio
 import shutil
-import os, sys
+import os
 from logging import getLogger
-
-sys.path.append(os.path.dirname(__file__))
-
-from audio_utils import store_read as util_store_read, store_write as util_store_write, AUDIO_LOADER_VERSION
-from audio_remoteinstall import install
 
 starter_config_data = {
   "selected_pack": "Default",
@@ -17,6 +12,7 @@ starter_config_data = {
 starter_config_string = json.dumps(starter_config_data)
 
 logger = getLogger("AUDIO_LOADER")
+AUDIO_LOADER_VERSION = 2
 
 def Log(text : str):
     logger.info(text)
@@ -57,8 +53,69 @@ class Result:
     def to_dict(self):
         return {"success": self.success, "message": self.message}
 
+class RemoteInstall:
+    def __init__(self, plugin):
+        self.packDb = "https://api.deckthemes.com/themes/legacy/audio"
+        self.plugin = plugin
+        self.packs = []
+    
+    async def run(self, command : str) -> str:
+        proc = await asyncio.create_subprocess_shell(command,        
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE)
+
+        stdout, stderr = await proc.communicate()
+        if (proc.returncode != 0):
+            raise Exception(f"Process exited with error code {proc.returncode}")
+
+        return stdout.decode()
+
+    async def load(self, force : bool = False) -> Result:
+        try:
+            if force or (self.packs == []):
+                response = await self.run(f"curl {self.packDb} -L")
+                self.packs = json.loads(response)
+                Log(f"Audio Loader - Got {len(self.packs)} from the database")
+        except Exception as e:
+            Log("Audio Loader - Loading remote Pack DB failed")
+            return Result(False, str(e))
+        
+        Log("Audio Loader - Loading remote Pack DB succeeded")
+        return Result(True)
+
+    async def install(self, uuid: str):
+        try:
+            result = await self.load()
+            if not result.success:
+                return result
+            
+            pack = None
+
+            for x in self.packs:
+                if x["id"] == uuid:
+                    pack = x
+                    break
+            
+            if pack is None:
+                raise Exception(f"Audio Loader - No pack found with id {uuid}")
+
+            tempDir = tempfile.TemporaryDirectory()
+
+            Log(f"Audio Loader - Downloading {pack['download_url']} to{tempDir.name}...")
+            packZipPath = os.path.join(tempDir.name, 'pack.zip')
+            await self.run(f"curl \"{pack['download_url']}\" -L -o \"{packZipPath}\"")
+
+            Log(f"Audio Loader - Unzipping {packZipPath}")
+            await self.run(f"unzip -o \"{packZipPath}\" -d /home/deck/homebrew/sounds")
+
+            tempDir.cleanup()
+        except Exception as e:
+            return Result(False, str(e))
+        
+        return Result(True)
+
 class Pack:
-    def __init__(self, packPath : str, json : dict, truncatedPackPath: str):
+    def __init__(self, packPath : str, json : dict):
         self.name = json["name"]
         self.description = json["description"] if ("description" in json) else ""
         self.version = json["version"] if ("version" in json) else "v1.0"
@@ -67,13 +124,11 @@ class Pack:
         self.ignore = json["ignore"] if ("ignore" in json) else []
         self.mappings = json["mappings"] if ("mappings" in json) else {}
         self.music = bool(json["music"]) if ("music" in json) else False
-        self.id = json["id"] if ("id" in json) else self.name
 
         if (AUDIO_LOADER_VERSION < self.require):
             raise Exception("Audio Loader - {} requires Audio Loader version {} but only version {} is installed".format(self.name, self.require, AUDIO_LOADER_VERSION))
         
         self.packPath = packPath
-        self.truncatedPackPath = truncatedPackPath
 
     async def delete(self) -> Result:
         try:
@@ -92,9 +147,7 @@ class Pack:
             "ignore": self.ignore,
             "mappings": self.mappings,
             "music": self.music,
-            "packPath": self.packPath,
-            "truncatedPackPath": self.truncatedPackPath,
-            "id": self.id
+            "packPath": self.packPath
         }
 
 class Plugin:
@@ -106,9 +159,6 @@ class Plugin:
 
     async def get_sound_packs(self) -> list:
         return [x.to_dict() for x in self.soundPacks]
-
-    async def download_theme_from_url(self, id : str, url : str) -> dict:
-        return (await install(id, url)).to_dict()
 
     async def get_config(self) -> object:
         configPath = "/home/deck/homebrew/sounds/config.json"
@@ -132,8 +182,8 @@ class Plugin:
                 fp.write(json_string)
                 return True
 
-    # async def download_pack(self, uuid: str) -> dict:
-    #     return (await self.remote.install(uuid)).to_dict()
+    async def download_pack(self, uuid: str) -> dict:
+        return (await self.remote.install(uuid)).to_dict()
 
     async def delete_pack(self, name: str) -> Result:
         pack = None
@@ -173,20 +223,13 @@ class Plugin:
                 with open(packDataPath, "r") as f:
                     pack = json.load(f)
                 
-                packData = Pack(packPath, pack, p)
+                packData = Pack(packPath, pack)
 
                 if (packData.name not in [p.name for p in self.soundPacks]):
                     self.soundPacks.append(packData)
                     Log("Audio Loader - Sound pack {} added".format(packData.name))
             except Exception as e:
                 Log("Audio Loader - Error parsing sound pack: {}".format(e))
-
-    async def store_read(self, key : str) -> str:
-        return util_store_read(key)
-    
-    async def store_write(self, key : str, val : str) -> dict:
-        util_store_write(key, val)
-        return Result(True).to_dict()
 
     async def _load(self):
         packsPath = "/home/deck/homebrew/sounds"
@@ -221,6 +264,10 @@ class Plugin:
             "sound_volume": 1,
             "music_volume": 0.5
         }
+
+        self.remote = RemoteInstall(self)
+        await self.remote.load()
+
 
         Log("Initializing Audio Loader...")
         await self._load(self)

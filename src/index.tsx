@@ -12,21 +12,12 @@ import {
   afterPatch,
   SliderField,
 } from "decky-frontend-lib";
-import { Permissions } from "./apiTypes";
-import { VFC, useMemo, useEffect } from "react";
+import { VFC, useMemo, useEffect, useState } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import { FaVolumeUp, FaMusic } from "react-icons/fa";
 import { AudioParent } from "./gamepadAudioFinder";
-import {
-  UninstallPage,
-  SettingsPage,
-  StarredPacksPage,
-  SubmissionsPage,
-  PackBrowserPage,
-  ExpandedViewPage,
-} from "./pack-manager";
+import { PackBrowserPage, UninstallPage, AboutPage } from "./pack-manager";
 import * as python from "./python";
-import * as api from "./api";
 import {
   GlobalState,
   GlobalStateContextProvider,
@@ -37,25 +28,35 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
     activeSound,
     gamesRunning,
+    setActiveSound,
     soundPacks,
+    setSoundPacks,
     menuMusic,
+    setMenuMusic,
     selectedMusic,
+    setSelectedMusic,
     soundVolume,
+    setSoundVolume,
     musicVolume,
+    setMusicVolume,
     gainNode,
-    dummyFuncResult,
-    setGlobalState,
   } = useGlobalState();
 
+  const [dummyFuncResult, setDummyResult] = useState<boolean>(false);
+
+  function dummyFuncTest() {
+    python.resolve(python.dummyFunction(), setDummyResult);
+  }
+
   useEffect(() => {
-    python.dummyFuncTest();
+    dummyFuncTest();
   }, []);
 
   function restartMusicPlayer(newMusic: string) {
     if (menuMusic !== null) {
       menuMusic.pause();
       menuMusic.currentTime = 0;
-      setGlobalState("menuMusic", null);
+      setMenuMusic(null);
     }
     // This makes sure if you are in a game, music doesn't start playing
     if (newMusic !== "None" && gamesRunning.length === 0) {
@@ -68,19 +69,21 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         musicFileName = currentPack?.mappings["menu_music.mp3"][randIndex];
       }
       const newMenuMusic = new Audio(
-        `/sounds_custom/${
-          currentPack?.truncatedPackPath || "error"
-        }/${musicFileName}`
+        `/sounds_custom/${currentPack?.path || "error"}/${musicFileName}`
       );
       newMenuMusic.play();
       newMenuMusic.loop = true;
       newMenuMusic.volume = musicVolume;
-      setGlobalState("menuMusic", newMenuMusic);
+      setMenuMusic(newMenuMusic);
     }
   }
 
   function refetchLocalPacks() {
-    python.reloadBackend();
+    python.resolve(python.reloadPacksDir(), () => {
+      python.resolve(python.getSoundPacks(), (data: any) => {
+        setSoundPacks(data);
+      });
+    });
   }
 
   const SoundPackDropdownOptions = useMemo(() => {
@@ -88,7 +91,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       { label: "Default", data: -1 },
       ...soundPacks
         // Only shows sound packs
-        .filter((e) => !e.music)
+        .filter((e) => !e.data.music)
         .map((p, index) => ({ label: p.name, data: index }))
         // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
         .sort((a, b) => a.label.localeCompare(b.label)),
@@ -100,7 +103,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       { label: "None", data: -1 },
       ...soundPacks
         // Only show music packs
-        .filter((e) => e.music)
+        .filter((e) => e.data.music)
         .map((p, index) => ({ label: p.name, data: index }))
         // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
         .sort((a, b) => a.label.localeCompare(b.label)),
@@ -142,7 +145,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 ?.data ?? -1
             }
             onChange={async (option) => {
-              setGlobalState("activeSound", option.label as string);
+              setActiveSound(option.label as string);
 
               const configObj = {
                 selected_pack: option.label,
@@ -168,7 +171,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 gainNode.context.currentTime + 0.01
               );
               // gainNode.gain.value = value;
-              setGlobalState("soundVolume", value);
+              setSoundVolume(value);
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: selectedMusic,
@@ -191,7 +194,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 ?.data ?? -1
             }
             onChange={async (option) => {
-              setGlobalState("selectedMusic", option.label as string);
+              setSelectedMusic(option.label as string);
 
               const configObj = {
                 selected_pack: activeSound,
@@ -213,7 +216,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             max={1}
             step={0.01}
             onChange={(value) => {
-              setGlobalState("musicVolume", value);
+              setMusicVolume(value);
               menuMusic.volume = value;
               const configObj = {
                 selected_pack: activeSound,
@@ -250,8 +253,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 };
 
 const PackManagerRouter: VFC = () => {
-  const { apiMeData, currentTab, setGlobalState } = useGlobalState();
-
+  const [currentTabRoute, setCurrentTabRoute] = useState<string>("browser");
   return (
     <div
       style={{
@@ -261,44 +263,26 @@ const PackManagerRouter: VFC = () => {
       }}
     >
       <Tabs
-        activeTab={currentTab}
+        activeTab={currentTabRoute}
         // @ts-ignore
         onShowTab={(tabID: string) => {
-          setGlobalState("currentTab", tabID);
+          setCurrentTabRoute(tabID);
         }}
         tabs={[
           {
             title: "Browse",
             content: <PackBrowserPage />,
-            id: "BrowsePacks",
+            id: "browser",
           },
-          ...(!!apiMeData
-            ? [
-                {
-                  title: "Starred Themes",
-                  content: <StarredPacksPage />,
-                  id: "StarredPacks",
-                },
-                ...(apiMeData.permissions.includes(Permissions.viewSubs)
-                  ? [
-                      {
-                        title: "Submissions",
-                        content: <SubmissionsPage />,
-                        id: "AudioSubmissions",
-                      },
-                    ]
-                  : []),
-              ]
-            : []),
           {
             title: "Uninstall",
             content: <UninstallPage />,
-            id: "UninstallPacks",
+            id: "uninstall",
           },
           {
-            title: "Settings",
-            content: <SettingsPage />,
-            id: "AudioLoaderSettings",
+            title: "About",
+            content: <AboutPage />,
+            id: "about",
           },
         ]}
       />
@@ -307,18 +291,9 @@ const PackManagerRouter: VFC = () => {
 };
 
 export default definePlugin((serverApi: ServerAPI) => {
-  const state: GlobalState = new GlobalState();
   python.setServer(serverApi);
-  python.setStateClass(state);
-  api.setServer(serverApi);
-  api.setStateClass(state);
+  const state: GlobalState = new GlobalState();
   let menuMusic: any = null;
-
-  python.resolve(python.storeRead("shortToken"), (token: string) => {
-    if (token) {
-      state.setGlobalState("apiShortToken", token);
-    }
-  });
 
   // Big thanks to AA and Mintexists for help finding this
   const soundVolumePatchInstance = afterPatch(
@@ -326,20 +301,18 @@ export default definePlugin((serverApi: ServerAPI) => {
     "GetActiveDestination",
     function (_, ret) {
       const { soundVolume } = state.getPublicState();
-      const setGlobalState = state.setGlobalState.bind(state);
       // @ts-ignore
       const gainNode = new GainNode(this.context, { gain: soundVolume });
       gainNode.connect(ret);
       try {
-        setGlobalState("gainNode", gainNode);
+        state.setGainNode(gainNode);
       } catch (e) {
         console.log(e);
       }
       return gainNode;
     }
   );
-  const setGlobalState = state.setGlobalState.bind(state);
-  setGlobalState("volumePatchInstance", soundVolumePatchInstance);
+  state.setVolumePatchInstance(soundVolumePatchInstance);
 
   // The sound effect intercept/player
   // Needs to be stored in globalstate in order to unpatch
@@ -370,14 +343,14 @@ export default definePlugin((serverApi: ServerAPI) => {
             );
             const mappedFileName = currentPack?.mappings[soundName][randIndex];
             newSoundURL = `/sounds_custom/${
-              currentPack?.truncatedPackPath || "/error"
+              currentPack?.path || "/error"
             }/${mappedFileName}`;
             break;
           }
           // Default path-replacing behavior
           newSoundURL = args[0].replace(
             "sounds/",
-            `sounds_custom/${currentPack?.truncatedPackPath || "/error"}/`
+            `sounds_custom/${currentPack?.path || "/error"}/`
           );
           break;
       }
@@ -385,19 +358,20 @@ export default definePlugin((serverApi: ServerAPI) => {
       return [newSoundURL];
     }
   );
-  setGlobalState("soundPatchInstance", patchInstance);
+  state.setSoundPatchInstance(patchInstance);
 
-  python.getAndSetSoundPacks().then(() => {
+  python.resolve(python.getSoundPacks(), (packs: any) => {
+    state.setSoundPacks(packs);
+    // This is nested in here so that all data has loaded before it attempts to find audio paths
     python.resolve(python.getConfig(), (data: any) => {
       // This sets the config data in globalState
+      state.setActiveSound(data?.selected_pack || "Default");
       const configSelectedMusic = data?.selected_music || "None";
+      state.setSelectedMusic(configSelectedMusic);
       const configSoundVolume = data?.sound_volume ?? 1;
+      state.setSoundVolume(configSoundVolume);
       const configMusicVolume = data?.music_volume ?? 0.5;
-
-      setGlobalState("activeSound", data?.selected_pack || "Default");
-      setGlobalState("selectedMusic", configSelectedMusic);
-      setGlobalState("soundVolume", configSoundVolume);
-      setGlobalState("musicVolume", configMusicVolume);
+      state.setMusicVolume(configMusicVolume);
 
       // Plays menu music initially
       // TODO: Add check if game is currently running
@@ -416,15 +390,13 @@ export default definePlugin((serverApi: ServerAPI) => {
           musicFileName = currentPack?.mappings["menu_music.mp3"][randIndex];
         }
         menuMusic = new Audio(
-          `/sounds_custom/${
-            currentPack?.truncatedPackPath || "error"
-          }/${musicFileName}`
+          `/sounds_custom/${currentPack?.path || "error"}/${musicFileName}`
         );
         menuMusic.play();
         menuMusic.loop = true;
         menuMusic.volume = configMusicVolume;
         console.log("play and loop ran", menuMusic);
-        setGlobalState("menuMusic", menuMusic);
+        state.setMenuMusic(menuMusic);
       }
     });
   });
@@ -441,20 +413,17 @@ export default definePlugin((serverApi: ServerAPI) => {
           gamesRunning,
           musicVolume,
         } = state.getPublicState();
-        const setGlobalState = state.setGlobalState.bind(state);
         if (selectedMusic !== "None") {
           if (update.bRunning) {
             // Because gamesRunning is in globalState, array methods like push and splice don't work
-            setGlobalState("gamesRunning", [...gamesRunning, update.unAppID]);
+            state.setGamesRunning([...gamesRunning, update.unAppID]);
             if (menuMusic != null) {
               menuMusic.pause();
               menuMusic.currentTime = 0;
-              setGlobalState("menuMusic", null);
+              state.setMenuMusic(null);
             }
           } else {
-            // This happens when an app is closed
-            setGlobalState(
-              "gamesRunning",
+            state.setGamesRunning(
               gamesRunning.filter((e) => e !== update.unAppID)
             );
 
@@ -478,14 +447,14 @@ export default definePlugin((serverApi: ServerAPI) => {
               }
               const newMenuMusic = new Audio(
                 `/sounds_custom/${
-                  currentMusic?.truncatedPackPath || "error"
+                  currentMusic?.path || "error"
                 }/${musicFileName}`
               );
               newMenuMusic.play();
               newMenuMusic.loop = true;
               newMenuMusic.volume = musicVolume;
               // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
-              setGlobalState("menuMusic", newMenuMusic);
+              state.setMenuMusic(newMenuMusic);
             }
           }
         }
@@ -495,12 +464,6 @@ export default definePlugin((serverApi: ServerAPI) => {
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
     <GlobalStateContextProvider globalStateClass={state}>
       <PackManagerRouter />
-    </GlobalStateContextProvider>
-  ));
-
-  serverApi.routerHook.addRoute("/pack-manager-expanded-view", () => (
-    <GlobalStateContextProvider globalStateClass={state}>
-      <ExpandedViewPage />
     </GlobalStateContextProvider>
   ));
 
@@ -515,11 +478,10 @@ export default definePlugin((serverApi: ServerAPI) => {
     onDismount: () => {
       const { menuMusic, soundPatchInstance, volumePatchInstance } =
         state.getPublicState();
-      const setGlobalState = state.setGlobalState.bind(state);
       if (menuMusic != null) {
         menuMusic.pause();
         menuMusic.currentTime = 0;
-        setGlobalState("menuMusic", null);
+        state.setMenuMusic(null);
       }
       soundPatchInstance.unpatch();
       volumePatchInstance.unpatch();

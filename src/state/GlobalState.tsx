@@ -1,44 +1,8 @@
 import { SingleDropdownOption } from "decky-frontend-lib";
 import { createContext, FC, useContext, useEffect, useState } from "react";
-import {
-  AccountData,
-  ThemeQueryResponse,
-  FilterQueryResponse,
-  ThemeQueryRequest,
-  PartialCSSThemeInfo,
-} from "../apiTypes";
 import { Pack, packDbEntry } from "../classes";
 
 interface PublicGlobalState {
-  // API
-  apiUrl: string;
-  apiShortToken: string;
-  apiFullToken: string;
-  apiTokenExpireDate: Date | number | undefined;
-  apiMeData: AccountData | undefined;
-
-  // Browse Page
-  serverFilters: FilterQueryResponse;
-  prevSearchOpts: ThemeQueryRequest;
-  browseThemeList: ThemeQueryResponse;
-  themeSearchOpts: ThemeQueryRequest;
-
-  // Starred Page
-  starredSearchOpts: ThemeQueryRequest;
-  starredServerFilters: FilterQueryResponse;
-  starredThemeList: ThemeQueryResponse;
-  prevStarSearchOpts: ThemeQueryRequest;
-
-  // Submission Page
-  prevSubSearchOpts: ThemeQueryRequest;
-  submissionSearchOpts: ThemeQueryRequest;
-  submissionServerFilters: FilterQueryResponse;
-  submissionThemeList: ThemeQueryResponse;
-
-  currentTab: string;
-  currentExpandedTheme: PartialCSSThemeInfo | undefined;
-
-  dummyFuncResult: boolean;
   menuMusic: any;
   soundPatchInstance: any;
   volumePatchInstance: any;
@@ -49,92 +13,35 @@ interface PublicGlobalState {
   activeSound: string;
   soundPacks: Pack[];
   selectedMusic: string;
+  browserPackList: packDbEntry[];
+  searchFieldValue: string;
+  selectedSort: number;
+  selectedTarget: SingleDropdownOption;
   isInstalling: boolean;
 }
 
 // The localThemeEntry interface refers to the theme data as given by the python function, the Theme class refers to a theme after it has been formatted and the generate function has been added
 
 interface PublicGlobalStateContext extends PublicGlobalState {
-  setGlobalState(key: string, data: any): void;
-  getGlobalState(key: string): any;
+  setMenuMusic(value: any): void;
+  setSoundPatchInstance(value: any): void;
+  setVolumePatchInstance(value: any): void;
+  setGainNode(value: any): void;
+  setSoundVolume(value: number): void;
+  setMusicVolume(value: number): void;
+  setGamesRunning(value: Number[]): void;
+  setActiveSound(value: string): void;
+  setSoundPacks(packArr: Pack[]): void;
+  setSelectedMusic(value: string): void;
+  setBrowserPackList(packArr: packDbEntry[]): void;
+  setSearchValue(value: string): void;
+  setSort(value: number): void;
+  setTarget(value: SingleDropdownOption): void;
+  setInstalling(bool: boolean): void;
 }
 
 // This class creates the getter and setter functions for all of the global state data.
 export class GlobalState {
-  // Api
-  private apiUrl: string = "https://api.deckthemes.com";
-  private apiShortToken: string = "";
-  private apiFullToken: string = "";
-  private apiTokenExpireDate: Date | number | undefined = undefined;
-  private apiMeData: AccountData | undefined = undefined;
-
-  private currentTab: string = "";
-  private currentExpandedTheme: PartialCSSThemeInfo | undefined = undefined;
-
-  // Browse Tab
-  private browseThemeList: ThemeQueryResponse = { total: 0, items: [] };
-  private prevSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private serverFilters: FilterQueryResponse = {
-    filters: ["All"],
-    order: ["Last Updated"],
-  };
-  private themeSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-
-  // Stars
-  private prevStarSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private starredSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private starredServerFilters: FilterQueryResponse = {
-    filters: ["All"],
-    order: ["Last Updated"],
-  };
-  private starredThemeList: ThemeQueryResponse = { total: 0, items: [] };
-
-  // Submissions
-  private prevSubSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private submissionSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private submissionServerFilters: FilterQueryResponse = {
-    filters: ["All"],
-    order: ["Last Updated"],
-  };
-  private submissionThemeList: ThemeQueryResponse = { total: 0, items: [] };
-
-  private dummyFuncResult: boolean = false;
   private menuMusic: any = null;
   private soundPatchInstance: any = null;
   private volumePatchInstance: any = null;
@@ -159,15 +66,6 @@ export class GlobalState {
 
   getPublicState() {
     return {
-      apiUrl: this.apiUrl,
-      apiShortToken: this.apiShortToken,
-      apiFullToken: this.apiFullToken,
-      apiTokenExpireDate: this.apiTokenExpireDate,
-      apiMeData: this.apiMeData,
-
-      currentExpandedTheme: this.currentExpandedTheme,
-      currentTab: this.currentTab,
-      dummyFuncResult: this.dummyFuncResult,
       menuMusic: this.menuMusic,
       soundPatchInstance: this.soundPatchInstance,
       volumePatchInstance: this.volumePatchInstance,
@@ -183,33 +81,90 @@ export class GlobalState {
       selectedSort: this.selectedSort,
       selectedTarget: this.selectedTarget,
       isInstalling: this.isInstalling,
-
-      // Browse Page
-      themeSearchOpts: this.themeSearchOpts,
-      serverFilters: this.serverFilters,
-      browseThemeList: this.browseThemeList,
-      prevSearchOpts: this.prevSearchOpts,
-
-      // Starred
-      prevStarSearchOpts: this.prevStarSearchOpts,
-      starredSearchOpts: this.starredSearchOpts,
-      starredServerFilters: this.starredServerFilters,
-      starredThemeList: this.starredThemeList,
-
-      // Submissions
-      prevSubSearchOpts: this.prevSubSearchOpts,
-      submissionSearchOpts: this.submissionSearchOpts,
-      submissionServerFilters: this.submissionServerFilters,
-      submissionThemeList: this.submissionThemeList,
     };
   }
 
-  getGlobalState(key: string) {
-    return this[key];
+  setMenuMusic(value: any) {
+    this.menuMusic = value;
+    this.forceUpdate();
   }
 
-  setGlobalState(key: string, data: any) {
-    this[key] = data;
+  setSoundPatchInstance(value: any) {
+    this.soundPatchInstance = value;
+    this.forceUpdate();
+  }
+
+  setVolumePatchInstance(value: any) {
+    this.volumePatchInstance = value;
+    this.forceUpdate();
+  }
+
+  setGainNode(value: any) {
+    this.gainNode = value;
+    this.forceUpdate();
+  }
+
+  setSoundVolume(value: any) {
+    this.soundVolume = value;
+    this.forceUpdate();
+  }
+
+  setMusicVolume(value: any) {
+    this.musicVolume = value;
+    this.forceUpdate();
+  }
+
+  setGamesRunning(gameArr: Number[]) {
+    this.gamesRunning = gameArr;
+    this.forceUpdate();
+  }
+
+  setActiveSound(value: string) {
+    this.activeSound = value;
+    this.forceUpdate();
+  }
+
+  setSoundPacks(packArr: Pack[]) {
+    // This formats the raw data grabbed by python into the Pack class format
+    let list: Pack[] = [];
+    packArr.forEach((e: any) => {
+      let entry = new Pack();
+      entry.data = e;
+      list.push(entry);
+    });
+    list.forEach((e) => e.init());
+
+    this.soundPacks = list;
+    this.forceUpdate();
+  }
+
+  setSelectedMusic(value: string) {
+    this.selectedMusic = value;
+    this.forceUpdate();
+  }
+
+  setBrowserPackList(packArr: packDbEntry[]) {
+    this.browserPackList = packArr;
+    this.forceUpdate();
+  }
+
+  setSearchValue(value: string) {
+    this.searchFieldValue = value;
+    this.forceUpdate();
+  }
+
+  setSort(value: number) {
+    this.selectedSort = value;
+    this.forceUpdate();
+  }
+
+  setTarget(value: SingleDropdownOption) {
+    this.selectedTarget = value;
+    this.forceUpdate();
+  }
+
+  setInstalling(bool: boolean) {
+    this.isInstalling = bool;
     this.forceUpdate();
   }
 
@@ -245,16 +200,52 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
       globalStateClass.eventBus.removeEventListener("stateUpdate", onUpdate);
   }, []);
 
-  const getGlobalState = (key: string) => globalStateClass.getGlobalState(key);
-  const setGlobalState = (key: string, data: any) =>
-    globalStateClass.setGlobalState(key, data);
+  const setMenuMusic = (value: any) => globalStateClass.setMenuMusic(value);
+  const setSoundPatchInstance = (value: any) =>
+    globalStateClass.setSoundPatchInstance(value);
+  const setVolumePatchInstance = (value: any) =>
+    globalStateClass.setVolumePatchInstance(value);
+  const setGainNode = (value: any) => globalStateClass.setGainNode(value);
+  const setSoundVolume = (value: number) =>
+    globalStateClass.setSoundVolume(value);
+  const setMusicVolume = (value: number) =>
+    globalStateClass.setMusicVolume(value);
+  const setGamesRunning = (gameArr: Number[]) =>
+    globalStateClass.setGamesRunning(gameArr);
+  const setActiveSound = (value: string) =>
+    globalStateClass.setActiveSound(value);
+  const setSoundPacks = (packArr: Pack[]) =>
+    globalStateClass.setSoundPacks(packArr);
+  const setSelectedMusic = (value: string) =>
+    globalStateClass.setSelectedMusic(value);
+  const setBrowserPackList = (packArr: packDbEntry[]) =>
+    globalStateClass.setBrowserPackList(packArr);
+  const setSearchValue = (value: string) =>
+    globalStateClass.setSearchValue(value);
+  const setSort = (value: number) => globalStateClass.setSort(value);
+  const setTarget = (value: SingleDropdownOption) =>
+    globalStateClass.setTarget(value);
+  const setInstalling = (bool: boolean) => globalStateClass.setInstalling(bool);
 
   return (
     <GlobalStateContext.Provider
       value={{
         ...publicState,
-        getGlobalState,
-        setGlobalState,
+        setMenuMusic,
+        setSoundPatchInstance,
+        setVolumePatchInstance,
+        setGainNode,
+        setSoundVolume,
+        setMusicVolume,
+        setGamesRunning,
+        setActiveSound,
+        setSoundPacks,
+        setSelectedMusic,
+        setBrowserPackList,
+        setSearchValue,
+        setSort,
+        setTarget,
+        setInstalling,
       }}
     >
       {children}
