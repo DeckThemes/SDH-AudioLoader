@@ -3,6 +3,9 @@ import shutil
 import os
 from logging import getLogger
 
+DECKY_HOME = os.environ["DECKY_HOME"]
+DECKY_USER_HOME = os.environ["DECKY_USER_HOME"]
+
 starter_config_data = {
   "selected_pack": "Default",
   "selected_music": "None",
@@ -161,7 +164,7 @@ class Plugin:
         return [x.to_dict() for x in self.soundPacks]
 
     async def get_config(self) -> object:
-        configPath = "/home/deck/homebrew/sounds/config.json"
+        configPath = f"{DECKY_HOME}/sounds/config.json"
 
         Log("Audio Loader - Fetching config file at {}".format(configPath))
         if (os.path.exists(configPath)):
@@ -172,7 +175,7 @@ class Plugin:
                 return data
 
     async def set_config(self, configObj: object):
-        configPath = "/home/deck/homebrew/sounds/config.json"
+        configPath = f"{DECKY_HOME}/sounds/config.json"
 
         Log("Audio Loader - Setting config file at {}".format(configPath))
         if (os.path.exists(configPath)):
@@ -203,8 +206,9 @@ class Plugin:
         self.soundPacks.remove(pack)
         return Result(True).to_dict()
 
-    async def parse_packs(self, packsDir : str):
+    async def parse_packs(self):
         self.soundPacks = []
+        packsDir = f"{DECKY_HOME}/sounds"
         possiblePacks = [str(p) for p in os.listdir(packsDir)]
 
         for p in possiblePacks:
@@ -232,10 +236,10 @@ class Plugin:
                 Log("Audio Loader - Error parsing sound pack: {}".format(e))
 
     async def _load(self):
-        packsPath = "/home/deck/homebrew/sounds"
-        symlinkPath = "/home/deck/.local/share/Steam/steamui/sounds_custom"
+        packsPath = f"{DECKY_HOME}/sounds"
+        symlinkPath = f"{DECKY_USER_HOME}/.local/share/Steam/steamui/sounds_custom"
 
-        configPath = "/home/deck/homebrew/sounds/config.json"
+        configPath = f"{DECKY_HOME}/sounds/config.json"
 
         Log("Audio Loader - Finding sound packs...")
         self.soundPacks = []
