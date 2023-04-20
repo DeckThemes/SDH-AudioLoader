@@ -3,8 +3,8 @@ import shutil
 import os
 from logging import getLogger
 
-DECKY_HOME = os.environ["DECKY_HOME"]
-DECKY_USER_HOME = os.environ["DECKY_USER_HOME"]
+DECKY_HOME = os.environ["DECKY_HOME"] # /home/user/homebrew
+DECKY_USER_HOME = os.environ["DECKY_USER_HOME"] # /home/user
 
 starter_config_data = {
   "selected_pack": "Default",
