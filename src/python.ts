@@ -42,9 +42,9 @@ export async function fetchPackDb(): Promise<any> {
 
 // getSoundPacks just fetches the packs already stored in python memory, you need to call this reload function to re-fetch the folder list
 export function reloadPacksDir(): Promise<any> {
-  return server!.callPluginMethod("parse_packs", {
-    packsDir: "/home/deck/homebrew/sounds",
-  });
+  return server!.callPluginMethod("parse_packs", {});
+
+
 }
 
 export function downloadPack(uuid: string): Promise<any> {
