@@ -109,7 +109,7 @@ class RemoteInstall:
             await self.run(f"curl \"{pack['download_url']}\" -L -o \"{packZipPath}\"")
 
             Log(f"Audio Loader - Unzipping {packZipPath}")
-            await self.run(f"unzip -o \"{packZipPath}\" -d /home/deck/homebrew/sounds")
+            await self.run(f"unzip -o \"{packZipPath}\" -d {DECKY_HOME}/sounds")
 
             tempDir.cleanup()
         except Exception as e:
