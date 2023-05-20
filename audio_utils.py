@@ -3,6 +3,8 @@ from logging import getLogger
 
 Logger = getLogger("AUDIO_LOADER")
 AUDIO_LOADER_VERSION = 2
+DECKY_HOME = os.environ["DECKY_HOME"] # /home/user/homebrew
+DECKY_USER_HOME = os.environ["DECKY_USER_HOME"] # /home/user
 
 def Log(text : str):
     Logger.info(f"[AUDIO_LOADER] {text}")
@@ -23,7 +25,7 @@ class Result:
         return {"success": self.success, "message": self.message}
 
 def store_path() -> str:
-    return os.path.join("/home/deck/homebrew/sounds", "STORE")
+    return os.path.join(DECKY_HOME, "sounds", "STORE")
 
 def store_reads() -> dict:
     path = store_path()
