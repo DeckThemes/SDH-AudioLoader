@@ -122,6 +122,7 @@ export const PackDisplayCard: FC<{
                 backgroundImage: imageURLCreator(),
                 backgroundColor: "#21323d",
                 position: "absolute",
+                backgroundPosition: "center",
                 top: "10%",
                 left: "0",
                 width: "80%",

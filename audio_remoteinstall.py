@@ -1,6 +1,6 @@
 import asyncio, json, tempfile, os
 from audio_utils import Result, Log
-from audio_utils import AUDIO_LOADER_VERSION
+from audio_utils import AUDIO_LOADER_VERSION, DECKY_HOME
 import aiohttp
 
 async def run(command : str) -> str:
@@ -45,7 +45,7 @@ async def install(id : str, base_url : str) -> Result:
 
     Log(f"Unzipping {themeZipPath}")
     try:
-        await run(f"unzip -o \"{themeZipPath}\" -d \"/home/deck/homebrew/sounds\"")
+        await run(f"unzip -o \"{themeZipPath}\" -d \"{DECKY_HOME}/sounds\"")
     except Exception as e:
         return Result(False, str(e))
 

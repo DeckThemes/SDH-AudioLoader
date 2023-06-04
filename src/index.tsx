@@ -75,6 +75,17 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       newMenuMusic.play();
       newMenuMusic.loop = true;
       newMenuMusic.volume = musicVolume;
+      const setVolume = (value: number) => {
+        newMenuMusic.volume = value;
+      };
+      // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
+      // @ts-ignore
+      window.AUDIOLOADER_MENUMUSIC = {
+        play: newMenuMusic.play.bind(newMenuMusic),
+        pause: newMenuMusic.pause.bind(newMenuMusic),
+        origVolume: newMenuMusic.volume,
+        setVolume: setVolume.bind(this),
+      };
       setGlobalState("menuMusic", newMenuMusic);
     }
   }
@@ -214,7 +225,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             step={0.01}
             onChange={(value) => {
               setGlobalState("musicVolume", value);
-              menuMusic.volume = value;
+              menuMusic.origVolume = value;
+              // @ts-ignore
+              window.AUDIOLOADER_MENUMUSIC.volume = value;
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: selectedMusic,
@@ -423,6 +436,16 @@ export default definePlugin((serverApi: ServerAPI) => {
         menuMusic.play();
         menuMusic.loop = true;
         menuMusic.volume = configMusicVolume;
+        const setVolume = (value: number) => {
+          menuMusic.volume = value;
+        };
+        // @ts-ignore
+        window.AUDIOLOADER_MENUMUSIC = {
+          play: menuMusic.play.bind(menuMusic),
+          pause: menuMusic.pause.bind(menuMusic),
+          origVolume: menuMusic.volume,
+          setVolume: setVolume.bind(this),
+        };
         console.log("play and loop ran", menuMusic);
         setGlobalState("menuMusic", menuMusic);
       }
@@ -484,7 +507,17 @@ export default definePlugin((serverApi: ServerAPI) => {
               newMenuMusic.play();
               newMenuMusic.loop = true;
               newMenuMusic.volume = musicVolume;
+              const setVolume = (value: number) => {
+                newMenuMusic.volume = value;
+              };
               // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
+              // @ts-ignore
+              window.AUDIOLOADER_MENUMUSIC = {
+                play: newMenuMusic.play.bind(newMenuMusic),
+                pause: newMenuMusic.pause.bind(newMenuMusic),
+                origVolume: newMenuMusic.volume,
+                setVolume: setVolume.bind(this),
+              };
               setGlobalState("menuMusic", newMenuMusic);
             }
           }

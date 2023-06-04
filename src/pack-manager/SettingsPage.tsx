@@ -129,7 +129,7 @@ export const SettingsPage: VFC = () => {
               <span>
                 See the DeckThemes Discord server for support.
                 <br />
-                discord.gg/HsU72Kfnpf
+                deckthemes.com/discord
               </span>
             </div>
             <div>
@@ -143,7 +143,7 @@ export const SettingsPage: VFC = () => {
                 Create and Submit Your Own Packs
               </h2>
               <span>
-                Instructions for theme creation/submission are available
+                Instructions for theme creation/submission are available on
                 DeckThemes' docs website.
                 <br />
                 docs.deckthemes.com

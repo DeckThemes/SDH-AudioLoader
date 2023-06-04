@@ -5,7 +5,7 @@ from logging import getLogger
 
 sys.path.append(os.path.dirname(__file__))
 
-from audio_utils import store_read as util_store_read, store_write as util_store_write, AUDIO_LOADER_VERSION
+from audio_utils import store_read as util_store_read, store_write as util_store_write, AUDIO_LOADER_VERSION, DECKY_HOME, DECKY_USER_HOME
 from audio_remoteinstall import install
 
 starter_config_data = {
@@ -111,7 +111,7 @@ class Plugin:
         return (await install(id, url)).to_dict()
 
     async def get_config(self) -> object:
-        configPath = "/home/deck/homebrew/sounds/config.json"
+        configPath = f"{DECKY_HOME}/sounds/config.json"
 
         Log("Audio Loader - Fetching config file at {}".format(configPath))
         if (os.path.exists(configPath)):
@@ -122,7 +122,7 @@ class Plugin:
                 return data
 
     async def set_config(self, configObj: object):
-        configPath = "/home/deck/homebrew/sounds/config.json"
+        configPath = f"{DECKY_HOME}/sounds/config.json"
 
         Log("Audio Loader - Setting config file at {}".format(configPath))
         if (os.path.exists(configPath)):
@@ -189,10 +189,10 @@ class Plugin:
         return Result(True).to_dict()
 
     async def _load(self):
-        packsPath = "/home/deck/homebrew/sounds"
-        symlinkPath = "/home/deck/.local/share/Steam/steamui/sounds_custom"
-
-        configPath = "/home/deck/homebrew/sounds/config.json"
+        packsPath = f"{DECKY_HOME}/sounds"
+        symlinkPath = f"{DECKY_USER_HOME}/.local/share/Steam/steamui/sounds_custom"
+        
+        configPath = f"{DECKY_HOME}/sounds/config.json"
 
         Log("Audio Loader - Finding sound packs...")
         self.soundPacks = []
