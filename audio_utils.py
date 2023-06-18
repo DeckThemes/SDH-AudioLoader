@@ -1,13 +1,42 @@
 import os
 from logging import getLogger
+import platform
 
 Logger = getLogger("AUDIO_LOADER")
 AUDIO_LOADER_VERSION = 2
+HOME = os.getenv("HOME")
+if not HOME:
+    HOME = os.path.expanduser("~")
+PLATFORM_WIN = platform.system() == "Windows"
 DECKY_HOME = os.environ["DECKY_HOME"] # /home/user/homebrew
 DECKY_USER_HOME = os.environ["DECKY_USER_HOME"] # /home/user
+DECKY_USER = os.getenv("DECKY_USER")
 
 def Log(text : str):
     Logger.info(f"[AUDIO_LOADER] {text}")
+
+def get_user_home() -> str:
+    return HOME
+
+def get_pack_path() -> str:
+    return os.path.join(DECKY_HOME, "sounds")
+
+def get_steam_path() -> str:
+    if PLATFORM_WIN:
+        try:
+            import winreg
+            conn = winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE)
+            key = winreg.OpenKey(conn, "SOFTWARE\\Wow6432Node\\Valve\\Steam")
+            val, type = winreg.QueryValueEx(key, "InstallPath")
+            if type != winreg.REG_SZ:
+                raise Exception(f"Expected type {winreg.REG_SZ}, got {type}")
+            
+            Log(f"Got win steam install path: '{val}'")
+            return val
+        except Exception as e:
+            return "C:\\Program Files (x86)\\Steam" # Taking a guess here
+    else:
+        return f"{get_user_home()}/.local/share/Steam"
 
 class Result:
     def __init__(self, success : bool, message : str = "Success"):
@@ -25,7 +54,7 @@ class Result:
         return {"success": self.success, "message": self.message}
 
 def store_path() -> str:
-    return os.path.join(DECKY_HOME, "sounds", "STORE")
+    return os.path.join(get_pack_path(), "STORE")
 
 def store_reads() -> dict:
     path = store_path()

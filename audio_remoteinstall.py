@@ -1,7 +1,5 @@
-import asyncio, json, tempfile, os
-from audio_utils import Result, Log
-from audio_utils import AUDIO_LOADER_VERSION, DECKY_HOME
-import aiohttp
+import asyncio, tempfile, os, zipfile, aiohttp
+from audio_utils import Result, Log, get_pack_path, AUDIO_LOADER_VERSION
 
 async def run(command : str) -> str:
     proc = await asyncio.create_subprocess_shell(command,        
@@ -20,41 +18,42 @@ async def install(id : str, base_url : str) -> Result:
 
     url = f"{base_url}themes/{id}"
 
-    try:
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
+    async with aiohttp.ClientSession(headers={"User-Agent": f"SDH-AudioLoader/{AUDIO_LOADER_VERSION}"}, connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
+        try:
             async with session.get(url) as resp:
                 if resp.status != 200:
                     raise Exception(f"Invalid status code {resp.status}")
 
                 data = await resp.json()
-    except Exception as e:
-        return Result(False, str(e))
-    
-    if (data["manifestVersion"] > AUDIO_LOADER_VERSION):
-        raise Exception("Manifest version of entry is unsupported by this version of Audio Loader")
+        except Exception as e:
+            return Result(False, str(e))
 
-    download_url = f"{base_url}blobs/{data['download']['id']}" 
-    tempDir = tempfile.TemporaryDirectory()
+        if (data["manifestVersion"] > AUDIO_LOADER_VERSION):
+            raise Exception("Manifest version of themedb entry is unsupported by this version of AudioLoader")
 
-    Log(f"Downloading {download_url} to {tempDir.name}...")
-    themeZipPath = os.path.join(tempDir.name, 'theme.zip')
-    try:
-        await run(f"curl \"{download_url}\" -L -o \"{themeZipPath}\"")
-    except Exception as e:
-        return Result(False, str(e))
+        download_url = f"{base_url}blobs/{data['download']['id']}" 
+        tempDir = tempfile.TemporaryDirectory()
+
+        Log(f"Downloading {download_url} to {tempDir.name}...")
+        themeZipPath = os.path.join(tempDir.name, 'pack.zip')
+        try:
+            async with session.get(download_url) as resp:
+                if resp.status != 200:
+                    raise Exception(f"Got {resp.status} code from '{download_url}'")
+
+                with open(themeZipPath, "wb") as out:
+                    out.write(await resp.read())
+
+        except Exception as e:
+            return Result(False, str(e))
 
     Log(f"Unzipping {themeZipPath}")
     try:
-        await run(f"unzip -o \"{themeZipPath}\" -d \"{DECKY_HOME}/sounds\"")
+        with zipfile.ZipFile(themeZipPath, 'r') as zip:
+            zip.extractall(get_pack_path())
     except Exception as e:
         return Result(False, str(e))
 
     tempDir.cleanup()
 
-    # for x in data["dependencies"]:
-    #     if x["name"] in local_themes:
-    #         continue
-            
-    #     await install(x["id"], base_url, local_themes)
-    
     return Result(True)
