@@ -32,6 +32,7 @@ import {
   GlobalStateContextProvider,
   useGlobalState,
 } from "./state/GlobalState";
+import { changeMenuMusic } from "./audioPlayers";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
@@ -52,42 +53,14 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   }, []);
 
   function restartMusicPlayer(newMusic: string) {
-    if (menuMusic !== null) {
-      menuMusic.pause();
-      menuMusic.currentTime = 0;
-      setGlobalState("menuMusic", null);
-    }
-    // This makes sure if you are in a game, music doesn't start playing
-    if (newMusic !== "None" && gamesRunning.length === 0) {
-      const currentPack = soundPacks.find((e) => e.name === newMusic);
-      let musicFileName = "menu_music.mp3";
-      if (Object.keys(currentPack?.mappings || {}).includes("menu_music.mp3")) {
-        const randIndex = Math.trunc(
-          Math.random() * currentPack?.mappings["menu_music.mp3"].length
-        );
-        musicFileName = currentPack?.mappings["menu_music.mp3"][randIndex];
-      }
-      const newMenuMusic = new Audio(
-        `/sounds_custom/${
-          currentPack?.truncatedPackPath || "error"
-        }/${musicFileName}`
-      );
-      newMenuMusic.play();
-      newMenuMusic.loop = true;
-      newMenuMusic.volume = musicVolume;
-      const setVolume = (value: number) => {
-        newMenuMusic.volume = value;
-      };
-      // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
-      // @ts-ignore
-      window.AUDIOLOADER_MENUMUSIC = {
-        play: newMenuMusic.play.bind(newMenuMusic),
-        pause: newMenuMusic.pause.bind(newMenuMusic),
-        origVolume: newMenuMusic.volume,
-        setVolume: setVolume.bind(this),
-      };
-      setGlobalState("menuMusic", newMenuMusic);
-    }
+    changeMenuMusic(
+      newMusic,
+      menuMusic,
+      (key, val) => setGlobalState(key, val),
+      gamesRunning,
+      soundPacks,
+      musicVolume
+    );
   }
 
   function refetchLocalPacks() {
@@ -202,8 +175,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 ?.data ?? -1
             }
             onChange={async (option) => {
-              setGlobalState("selectedMusic", option.label as string);
-
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: option.label,
@@ -225,7 +196,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             step={0.01}
             onChange={(value) => {
               setGlobalState("musicVolume", value);
-              menuMusic.origVolume = value;
+              menuMusic.volume = value;
               // @ts-ignore
               window.AUDIOLOADER_MENUMUSIC.volume = value;
               const configObj = {
@@ -325,7 +296,6 @@ export default definePlugin((serverApi: ServerAPI) => {
   python.setStateClass(state);
   api.setServer(serverApi);
   api.setStateClass(state);
-  let menuMusic: any = null;
 
   python.resolve(python.storeRead("shortToken"), (token: string) => {
     if (token) {
@@ -412,43 +382,17 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("soundVolume", configSoundVolume);
       setGlobalState("musicVolume", configMusicVolume);
 
+      const { soundPacks } = state.getPublicState();
+
       // Plays menu music initially
-      // TODO: Add check if game is currently running
-      if (configSelectedMusic !== "None") {
-        const { soundPacks } = state.getPublicState();
-        const currentPack = soundPacks.find(
-          (e) => e.name === configSelectedMusic
-        );
-        let musicFileName = "menu_music.mp3";
-        if (
-          Object.keys(currentPack?.mappings || {}).includes("menu_music.mp3")
-        ) {
-          const randIndex = Math.trunc(
-            Math.random() * currentPack?.mappings["menu_music.mp3"].length
-          );
-          musicFileName = currentPack?.mappings["menu_music.mp3"][randIndex];
-        }
-        menuMusic = new Audio(
-          `/sounds_custom/${
-            currentPack?.truncatedPackPath || "error"
-          }/${musicFileName}`
-        );
-        menuMusic.play();
-        menuMusic.loop = true;
-        menuMusic.volume = configMusicVolume;
-        const setVolume = (value: number) => {
-          menuMusic.volume = value;
-        };
-        // @ts-ignore
-        window.AUDIOLOADER_MENUMUSIC = {
-          play: menuMusic.play.bind(menuMusic),
-          pause: menuMusic.pause.bind(menuMusic),
-          origVolume: menuMusic.volume,
-          setVolume: setVolume.bind(this),
-        };
-        console.log("play and loop ran", menuMusic);
-        setGlobalState("menuMusic", menuMusic);
-      }
+      changeMenuMusic(
+        configSelectedMusic,
+        null,
+        setGlobalState,
+        [],
+        soundPacks,
+        configMusicVolume
+      );
     });
   });
 
@@ -457,13 +401,8 @@ export default definePlugin((serverApi: ServerAPI) => {
     // Refer to the SteamClient.d.ts or just console.log(SteamClient) to see all of it's methods
     SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
       (update: AppState) => {
-        const {
-          soundPacks,
-          menuMusic,
-          selectedMusic,
-          gamesRunning,
-          musicVolume,
-        } = state.getPublicState();
+        const { menuMusic, selectedMusic, gamesRunning } =
+          state.getPublicState();
         const setGlobalState = state.setGlobalState.bind(state);
         if (selectedMusic !== "None") {
           if (update.bRunning) {
@@ -471,54 +410,21 @@ export default definePlugin((serverApi: ServerAPI) => {
             setGlobalState("gamesRunning", [...gamesRunning, update.unAppID]);
             if (menuMusic != null) {
               menuMusic.pause();
-              menuMusic.currentTime = 0;
-              setGlobalState("menuMusic", null);
+              // menuMusic.currentTime = 0;
+              // setGlobalState("menuMusic", null);
             }
           } else {
-            // This happens when an app is closed
-            setGlobalState(
-              "gamesRunning",
-              gamesRunning.filter((e) => e !== update.unAppID)
+            const filteredGames = gamesRunning.filter(
+              (e) => e !== update.unAppID
             );
+            // This happens when an app is closed
+            setGlobalState("gamesRunning", filteredGames);
 
             // I'm re-using the filter here because I don't believe the getPublicState() method will update the values if they are changed
-            if (gamesRunning.filter((e) => e !== update.unAppID).length === 0) {
-              const currentMusic = soundPacks.find(
-                (e) => e.name === selectedMusic
-              );
-              let musicFileName = "menu_music.mp3";
-              if (
-                Object.keys(currentMusic?.mappings || {}).includes(
-                  "menu_music.mp3"
-                )
-              ) {
-                const randIndex = Math.trunc(
-                  Math.random() *
-                    currentMusic?.mappings["menu_music.mp3"].length
-                );
-                musicFileName =
-                  currentMusic?.mappings["menu_music.mp3"][randIndex];
+            if (filteredGames.length === 0) {
+              if (menuMusic !== null) {
+                menuMusic.play();
               }
-              const newMenuMusic = new Audio(
-                `/sounds_custom/${
-                  currentMusic?.truncatedPackPath || "error"
-                }/${musicFileName}`
-              );
-              newMenuMusic.play();
-              newMenuMusic.loop = true;
-              newMenuMusic.volume = musicVolume;
-              const setVolume = (value: number) => {
-                newMenuMusic.volume = value;
-              };
-              // Update menuMusic in globalState after every change so that it reflects the changes the next time it checks
-              // @ts-ignore
-              window.AUDIOLOADER_MENUMUSIC = {
-                play: newMenuMusic.play.bind(newMenuMusic),
-                pause: newMenuMusic.pause.bind(newMenuMusic),
-                origVolume: newMenuMusic.volume,
-                setVolume: setVolume.bind(this),
-              };
-              setGlobalState("menuMusic", newMenuMusic);
             }
           }
         }
