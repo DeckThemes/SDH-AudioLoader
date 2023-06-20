@@ -27,11 +27,7 @@ import {
 } from "./pack-manager";
 import * as python from "./python";
 import * as api from "./api";
-import {
-  GlobalState,
-  GlobalStateContextProvider,
-  useGlobalState,
-} from "./state/GlobalState";
+import { GlobalState, GlobalStateContextProvider, useGlobalState } from "./state/GlobalState";
 import { changeMenuMusic } from "./audioPlayers";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
@@ -95,8 +91,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     return (
       <PanelSectionRow>
         <span>
-          AudioLoader failed to initialize, try reloading, and if that doesn't
-          work, try restarting your deck.
+          AudioLoader failed to initialize, try reloading, and if that doesn't work, try restarting
+          your deck.
         </span>
       </PanelSectionRow>
     );
@@ -122,8 +118,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               // activeSound now stores a string, this just finds the corresponding option for the label
               // the "?? -2" is there incase find returns undefined (the currently selected theme was deleted or something)
               // it NEEDS to be a nullish coalescing operator because 0 needs to be treated as true
-              SoundPackDropdownOptions.find((e) => e.label === activeSound)
-                ?.data ?? -1
+              SoundPackDropdownOptions.find((e) => e.label === activeSound)?.data ?? -1
             }
             onChange={async (option) => {
               setGlobalState("activeSound", option.label as string);
@@ -147,10 +142,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             max={1}
             step={0.01}
             onChange={(value) => {
-              gainNode.gain.setValueAtTime(
-                value,
-                gainNode.context.currentTime + 0.01
-              );
+              gainNode.gain.setValueAtTime(value, gainNode.context.currentTime + 0.01);
               // gainNode.gain.value = value;
               setGlobalState("soundVolume", value);
               const configObj = {
@@ -171,8 +163,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             menuLabel="Music Pack"
             rgOptions={MusicPackDropdownOptions}
             selectedOption={
-              MusicPackDropdownOptions.find((e) => e.label === selectedMusic)
-                ?.data ?? -1
+              MusicPackDropdownOptions.find((e) => e.label === selectedMusic)?.data ?? -1
             }
             onChange={async (option) => {
               const configObj = {
@@ -207,11 +198,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               };
               python.setConfig(configObj);
             }}
-            icon={
-              <FaMusic
-                style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }}
-              />
-            }
+            icon={<FaMusic style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }} />}
           />
         </PanelSectionRow>
       </PanelSection>
@@ -348,9 +335,7 @@ export default definePlugin((serverApi: ServerAPI) => {
           }
           // Mapping check
           if (Object.keys(currentPack?.mappings || {}).includes(soundName)) {
-            const randIndex = Math.trunc(
-              Math.random() * currentPack?.mappings[soundName].length
-            );
+            const randIndex = Math.trunc(Math.random() * currentPack?.mappings[soundName].length);
             const mappedFileName = currentPack?.mappings[soundName][randIndex];
             newSoundURL = `/sounds_custom/${
               currentPack?.truncatedPackPath || "/error"
@@ -385,51 +370,39 @@ export default definePlugin((serverApi: ServerAPI) => {
       const { soundPacks } = state.getPublicState();
 
       // Plays menu music initially
-      changeMenuMusic(
-        configSelectedMusic,
-        null,
-        setGlobalState,
-        [],
-        soundPacks,
-        configMusicVolume
-      );
+      changeMenuMusic(configSelectedMusic, null, setGlobalState, [], soundPacks, configMusicVolume);
     });
   });
 
   const AppStateRegistrar =
     // SteamClient is something exposed by the SP tab of SteamUI, it's not a decky-frontend-lib thingy, but you can still call it normally
     // Refer to the SteamClient.d.ts or just console.log(SteamClient) to see all of it's methods
-    SteamClient.GameSessions.RegisterForAppLifetimeNotifications(
-      (update: AppState) => {
-        const { menuMusic, selectedMusic, gamesRunning } =
-          state.getPublicState();
-        const setGlobalState = state.setGlobalState.bind(state);
-        if (selectedMusic !== "None") {
-          if (update.bRunning) {
-            // Because gamesRunning is in globalState, array methods like push and splice don't work
-            setGlobalState("gamesRunning", [...gamesRunning, update.unAppID]);
-            if (menuMusic != null) {
-              menuMusic.pause();
-              // menuMusic.currentTime = 0;
-              // setGlobalState("menuMusic", null);
-            }
-          } else {
-            const filteredGames = gamesRunning.filter(
-              (e) => e !== update.unAppID
-            );
-            // This happens when an app is closed
-            setGlobalState("gamesRunning", filteredGames);
+    SteamClient.GameSessions.RegisterForAppLifetimeNotifications((update: AppState) => {
+      const { menuMusic, selectedMusic, gamesRunning } = state.getPublicState();
+      const setGlobalState = state.setGlobalState.bind(state);
+      if (selectedMusic !== "None") {
+        if (update.bRunning) {
+          // Because gamesRunning is in globalState, array methods like push and splice don't work
+          setGlobalState("gamesRunning", [...gamesRunning, update.unAppID]);
+          if (menuMusic != null) {
+            menuMusic.pause();
+            // menuMusic.currentTime = 0;
+            // setGlobalState("menuMusic", null);
+          }
+        } else {
+          const filteredGames = gamesRunning.filter((e) => e !== update.unAppID);
+          // This happens when an app is closed
+          setGlobalState("gamesRunning", filteredGames);
 
-            // I'm re-using the filter here because I don't believe the getPublicState() method will update the values if they are changed
-            if (filteredGames.length === 0) {
-              if (menuMusic !== null) {
-                menuMusic.play();
-              }
+          // I'm re-using the filter here because I don't believe the getPublicState() method will update the values if they are changed
+          if (filteredGames.length === 0) {
+            if (menuMusic !== null) {
+              menuMusic.play();
             }
           }
         }
       }
-    );
+    });
 
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
     <GlobalStateContextProvider globalStateClass={state}>
@@ -452,8 +425,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     ),
     icon: <RiFolderMusicFill />,
     onDismount: () => {
-      const { menuMusic, soundPatchInstance, volumePatchInstance } =
-        state.getPublicState();
+      const { menuMusic, soundPatchInstance, volumePatchInstance } = state.getPublicState();
       const setGlobalState = state.setGlobalState.bind(state);
       if (menuMusic != null) {
         menuMusic.pause();

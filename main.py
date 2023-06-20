@@ -68,12 +68,17 @@ class Pack:
         self.mappings = json["mappings"] if ("mappings" in json) else {}
         self.music = bool(json["music"]) if ("music" in json) else False
         self.id = json["id"] if ("id" in json) else self.name
+        
 
         if (AUDIO_LOADER_VERSION < self.require):
             raise Exception("Audio Loader - {} requires Audio Loader version {} but only version {} is installed".format(self.name, self.require, AUDIO_LOADER_VERSION))
         
         self.packPath = packPath
         self.truncatedPackPath = truncatedPackPath
+
+        self.has_intro = False
+        if (self.music == True):
+            self.has_intro = os.path.exists(os.path.join(packPath, self.mappings["intro_music.mp3"] if "intro_music.mp3" in self.mappings else "intro_music.mp3"))
 
     async def delete(self) -> Result:
         try:
@@ -92,6 +97,7 @@ class Pack:
             "ignore": self.ignore,
             "mappings": self.mappings,
             "music": self.music,
+            "hasIntro": self.has_intro,
             "packPath": self.packPath,
             "truncatedPackPath": self.truncatedPackPath,
             "id": self.id

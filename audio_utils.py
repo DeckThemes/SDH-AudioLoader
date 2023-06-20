@@ -3,7 +3,7 @@ from logging import getLogger
 import platform
 
 Logger = getLogger("AUDIO_LOADER")
-AUDIO_LOADER_VERSION = 2
+AUDIO_LOADER_VERSION = 3
 HOME = os.getenv("HOME")
 if not HOME:
     HOME = os.path.expanduser("~")
