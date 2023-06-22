@@ -78,7 +78,7 @@ class Pack:
 
         self.has_intro = False
         if (self.music == True):
-            self.has_intro = os.path.exists(os.path.join(packPath, self.mappings["intro_music.mp3"] if "intro_music.mp3" in self.mappings else "intro_music.mp3"))
+            self.has_intro = "intro_music.mp3" in self.mappings or os.path.exists(os.path.join(packPath, "intro_music.mp3"))
 
     async def delete(self) -> Result:
         try:
