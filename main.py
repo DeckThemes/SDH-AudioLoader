@@ -5,7 +5,7 @@ from logging import getLogger
 
 sys.path.append(os.path.dirname(__file__))
 
-from audio_utils import store_read as util_store_read, store_write as util_store_write, AUDIO_LOADER_VERSION, DECKY_HOME, DECKY_USER_HOME
+from audio_utils import store_read as util_store_read, store_write as util_store_write, get_steam_path, get_pack_path, AUDIO_LOADER_VERSION, DECKY_HOME, DECKY_USER_HOME
 from audio_remoteinstall import install
 
 starter_config_data = {
@@ -68,12 +68,17 @@ class Pack:
         self.mappings = json["mappings"] if ("mappings" in json) else {}
         self.music = bool(json["music"]) if ("music" in json) else False
         self.id = json["id"] if ("id" in json) else self.name
+        
 
         if (AUDIO_LOADER_VERSION < self.require):
             raise Exception("Audio Loader - {} requires Audio Loader version {} but only version {} is installed".format(self.name, self.require, AUDIO_LOADER_VERSION))
         
         self.packPath = packPath
         self.truncatedPackPath = truncatedPackPath
+
+        self.has_intro = False
+        if (self.music == True):
+            self.has_intro = "intro_music.mp3" in self.mappings or os.path.exists(os.path.join(packPath, "intro_music.mp3"))
 
     async def delete(self) -> Result:
         try:
@@ -92,6 +97,7 @@ class Pack:
             "ignore": self.ignore,
             "mappings": self.mappings,
             "music": self.music,
+            "hasIntro": self.has_intro,
             "packPath": self.packPath,
             "truncatedPackPath": self.truncatedPackPath,
             "id": self.id
@@ -111,7 +117,7 @@ class Plugin:
         return (await install(id, url)).to_dict()
 
     async def get_config(self) -> object:
-        configPath = f"{DECKY_HOME}/sounds/config.json"
+        configPath = os.path.join(get_pack_path(), 'config.json')
 
         Log("Audio Loader - Fetching config file at {}".format(configPath))
         if (os.path.exists(configPath)):
@@ -122,7 +128,7 @@ class Plugin:
                 return data
 
     async def set_config(self, configObj: object):
-        configPath = f"{DECKY_HOME}/sounds/config.json"
+        configPath = os.path.join(get_pack_path(), 'config.json')
 
         Log("Audio Loader - Setting config file at {}".format(configPath))
         if (os.path.exists(configPath)):
@@ -189,10 +195,9 @@ class Plugin:
         return Result(True).to_dict()
 
     async def _load(self):
-        packsPath = f"{DECKY_HOME}/sounds"
-        symlinkPath = f"{DECKY_USER_HOME}/.local/share/Steam/steamui/sounds_custom"
+        packsPath = get_pack_path()
         
-        configPath = f"{DECKY_HOME}/sounds/config.json"
+        configPath = os.path.join(get_pack_path(), 'config.json')
 
         Log("Audio Loader - Finding sound packs...")
         self.soundPacks = []
@@ -200,8 +205,8 @@ class Plugin:
         if (not os.path.exists(packsPath)):
             await create_folder(packsPath)
 
-        if (not os.path.exists(symlinkPath)):
-            await create_symlink(packsPath, symlinkPath)
+        if (not os.path.exists(os.path.join(get_steam_path(), 'steamui', 'sounds_custom'))):
+            await create_symlink(get_pack_path(), os.path.join(get_steam_path(), 'steamui', 'sounds_custom'))
 
         if (not os.path.exists(configPath)):
             await create_config(configPath)

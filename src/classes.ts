@@ -8,6 +8,7 @@ export interface Pack {
   packPath: string; // This contains the full path from root to the pack
   truncatedPackPath: string; // This is the relative path from ~/homebrew/sounds
   music: boolean;
+  hasIntro: boolean;
   id: string;
 }
 
@@ -58,7 +59,9 @@ export type DeckSound =
   | "steam_chatroom_notification.m4a"
   | "ui_steam_message_old_smooth.m4a"
   | "ui_steam_smoother_friend_join.m4a"
-  | "ui_steam_smoother_friend_online.m4a";
+  | "ui_steam_smoother_friend_online.m4a"
+  | "menu_music.mp3"
+  | "intro_music.mp3";
 
 export type Mappings =
   | {
