@@ -53,24 +53,18 @@ export function execute(promise: Promise<any>) {
 
 export function getAndSetSoundPacks(): Promise<any> {
   const setGlobalState = globalState!.setGlobalState.bind(globalState);
-  return server!
-    .callPluginMethod<{}, Pack[]>("get_sound_packs", {})
-    .then((data) => {
-      if (data.success) {
-        setGlobalState("soundPacks", data.result);
-      }
-    });
+  return server!.callPluginMethod<{}, Pack[]>("get_sound_packs", {}).then((data) => {
+    if (data.success) {
+      setGlobalState("soundPacks", data.result);
+    }
+  });
 }
 
 // getSoundPacks just fetches the packs already stored in python memory, you need to call this reload function to re-fetch the folder list
 export function reloadBackend(): Promise<void> {
-  return server!
-    .callPluginMethod("parse_packs", {
-      packsDir: "/home/deck/homebrew/sounds",
-    })
-    .then(() => {
-      getAndSetSoundPacks();
-    });
+  return server!.callPluginMethod("parse_packs", {}).then(() => {
+    getAndSetSoundPacks();
+  });
 }
 
 export function dummyFuncTest(): void {

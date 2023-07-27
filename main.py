@@ -159,7 +159,8 @@ class Plugin:
         self.soundPacks.remove(pack)
         return Result(True).to_dict()
 
-    async def parse_packs(self, packsDir : str):
+    async def parse_packs(self):
+        packsDir = get_pack_path()
         self.soundPacks = []
         possiblePacks = [str(p) for p in os.listdir(packsDir)]
 
