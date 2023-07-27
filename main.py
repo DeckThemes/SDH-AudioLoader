@@ -212,7 +212,7 @@ class Plugin:
         if (not os.path.exists(configPath)):
             await create_config(configPath)
 
-        await self.parse_packs(self, packsPath)
+        await self.parse_packs(self)
         await self.get_config(self)
 
         

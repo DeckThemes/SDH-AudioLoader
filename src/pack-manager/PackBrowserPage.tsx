@@ -7,11 +7,7 @@ import { isEqual } from "lodash";
 
 // Interfaces for the JSON objects the lists work with
 import { useGlobalState } from "../state";
-import {
-  BrowserSearchFields,
-  LoadMoreButton,
-  PackDisplayCard,
-} from "../components";
+import { BrowserSearchFields, LoadMoreButton, PackDisplayCard } from "../components";
 
 export const PackBrowserPage: FC = () => {
   const {
@@ -23,13 +19,14 @@ export const PackBrowserPage: FC = () => {
     prevSearchOpts,
   } = useGlobalState();
 
-  const [backendVersion, setBackendVer] = useState<number>(2);
-  function reloadBackendVer() {
-    python.resolve(python.getBackendVersion(), setBackendVer);
-  }
+  // Doesn't currently filter rn
+  // const [backendVersion, setBackendVer] = useState<number>(2);
+  // function reloadBackendVer() {
+  // python.resolve(python.getBackendVersion(), setBackendVer);
+  // }
 
   function reloadThemes() {
-    reloadBackendVer();
+    // reloadBackendVer();
     getThemes(searchOpts, "/themes", "browseThemeList", setSnapIndex);
     python.reloadBackend();
   }
@@ -42,7 +39,7 @@ export const PackBrowserPage: FC = () => {
 
   // Runs upon opening the page every time
   useLayoutEffect(() => {
-    reloadBackendVer();
+    // reloadBackendVer();
     if (apiShortToken && !apiFullToken) {
       logInWithShortToken();
     }
