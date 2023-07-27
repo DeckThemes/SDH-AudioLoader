@@ -159,7 +159,8 @@ class Plugin:
         self.soundPacks.remove(pack)
         return Result(True).to_dict()
 
-    async def parse_packs(self, packsDir : str):
+    async def parse_packs(self):
+        packsDir = get_pack_path()
         self.soundPacks = []
         possiblePacks = [str(p) for p in os.listdir(packsDir)]
 
@@ -211,7 +212,7 @@ class Plugin:
         if (not os.path.exists(configPath)):
             await create_config(configPath)
 
-        await self.parse_packs(self, packsPath)
+        await self.parse_packs(self)
         await self.get_config(self)
 
         
