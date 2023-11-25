@@ -1,10 +1,10 @@
 {
   "name": "Audio Loader",
-  "author": "EMERALD0874 & Beebles",
+  "author": "DeckThemes",
   "flags": ["_root"],
   "publish": {
     "tags": ["style", "media", "music"],
-    "description": "Replaces Steam UI sound effects with custom sounds and adds music to menus.",
+    "description": "Dynamically loads menu music and replaces existing Steam sounds. For more information, visit deckthemes.com.",
     "image": "https://i.imgur.com/0Xuc1pr.png"
   }
 }
