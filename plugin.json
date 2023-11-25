@@ -5,6 +5,6 @@
   "publish": {
     "tags": ["style", "media", "music"],
     "description": "Dynamically loads menu music and replaces existing Steam sounds. For more information, visit deckthemes.com.",
-    "image": "https://i.imgur.com/0Xuc1pr.png"
+    "image": "https://raw.githubusercontent.com/EMERALD0874/SDH-AudioLoader/main/assets/audio-store-preview.png"
   }
 }
