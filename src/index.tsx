@@ -29,6 +29,7 @@ import * as python from "./python";
 import * as api from "./api";
 import { GlobalState, GlobalStateContextProvider, useGlobalState } from "./state/GlobalState";
 import { changeMenuMusic } from "./audioPlayers";
+import { LegacyDropdown } from "./components";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
@@ -36,6 +37,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     gamesRunning,
     soundPacks,
     menuMusic,
+    legacyEnabled,
     selectedMusic,
     soundVolume,
     musicVolume,
@@ -157,50 +159,57 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           />
         </PanelSectionRow>
         <PanelSectionRow>
-          <DropdownItem
-            bottomSeparator="none"
-            onMenuWillOpen={() => refetchLocalPacks()}
-            menuLabel="Music Pack"
-            rgOptions={MusicPackDropdownOptions}
-            selectedOption={
-              MusicPackDropdownOptions.find((e) => e.label === selectedMusic)?.data ?? -1
-            }
-            onChange={async (option) => {
-              const configObj = {
-                selected_pack: activeSound,
-                selected_music: option.label,
-                sound_volume: soundVolume,
-                music_volume: musicVolume,
-              };
-              python.setConfig(configObj);
-              restartMusicPlayer(option.label as string);
-            }}
-          />
+          <LegacyDropdown />
         </PanelSectionRow>
-        <PanelSectionRow>
-          <SliderField
-            bottomSeparator="standard"
-            label={undefined}
-            value={musicVolume}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(value) => {
-              setGlobalState("musicVolume", value);
-              menuMusic.volume = value;
-              // @ts-ignore
-              window.AUDIOLOADER_MENUMUSIC.volume = value;
-              const configObj = {
-                selected_pack: activeSound,
-                selected_music: selectedMusic,
-                sound_volume: soundVolume,
-                music_volume: value,
-              };
-              python.setConfig(configObj);
-            }}
-            icon={<FaMusic style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }} />}
-          />
-        </PanelSectionRow>
+        {legacyEnabled && (
+          <>
+            <PanelSectionRow>
+              <DropdownItem
+                bottomSeparator="none"
+                onMenuWillOpen={() => refetchLocalPacks()}
+                menuLabel="Music Pack"
+                rgOptions={MusicPackDropdownOptions}
+                selectedOption={
+                  MusicPackDropdownOptions.find((e) => e.label === selectedMusic)?.data ?? -1
+                }
+                onChange={async (option) => {
+                  const configObj = {
+                    selected_pack: activeSound,
+                    selected_music: option.label,
+                    sound_volume: soundVolume,
+                    music_volume: musicVolume,
+                  };
+                  python.setConfig(configObj);
+                  restartMusicPlayer(option.label as string);
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <SliderField
+                bottomSeparator="standard"
+                label={undefined}
+                value={musicVolume}
+                min={0}
+                max={1}
+                step={0.01}
+                onChange={(value) => {
+                  setGlobalState("musicVolume", value);
+                  menuMusic.volume = value;
+                  // @ts-ignore
+                  window.AUDIOLOADER_MENUMUSIC.volume = value;
+                  const configObj = {
+                    selected_pack: activeSound,
+                    selected_music: selectedMusic,
+                    sound_volume: soundVolume,
+                    music_volume: value,
+                  };
+                  python.setConfig(configObj);
+                }}
+                icon={<FaMusic style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }} />}
+              />
+            </PanelSectionRow>
+          </>
+        )}
       </PanelSection>
       <PanelSection title="Settings">
         <PanelSectionRow>
@@ -287,6 +296,12 @@ export default definePlugin((serverApi: ServerAPI) => {
   python.resolve(python.storeRead("shortToken"), (token: string) => {
     if (token) {
       state.setGlobalState("apiShortToken", token);
+    }
+  });
+
+  python.resolve(python.storeRead("legacyEnabled"), (value: "true" | "false") => {
+    if (value === "true") {
+      state.setGlobalState("legacyEnabled", true);
     }
   });
 

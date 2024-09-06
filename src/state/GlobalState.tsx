@@ -39,6 +39,7 @@ interface PublicGlobalState {
   currentExpandedTheme: PartialCSSThemeInfo | undefined;
 
   dummyFuncResult: boolean;
+  legacyEnabled: boolean;
   menuMusic: any;
   soundPatchInstance: any;
   volumePatchInstance: any;
@@ -138,6 +139,7 @@ export class GlobalState {
   private menuMusic: any = null;
   private soundPatchInstance: any = null;
   private volumePatchInstance: any = null;
+  private legacyEnabled: boolean = false;
   private gainNode: any = null;
   private soundVolume: number = 1;
   private musicVolume: number = 0.5;
@@ -166,6 +168,7 @@ export class GlobalState {
       apiMeData: this.apiMeData,
 
       currentExpandedTheme: this.currentExpandedTheme,
+      legacyEnabled: this.legacyEnabled,
       currentTab: this.currentTab,
       dummyFuncResult: this.dummyFuncResult,
       menuMusic: this.menuMusic,
@@ -226,10 +229,7 @@ interface ProviderProps {
 }
 
 // This is a React Component that you can wrap multiple separate things in, as long as they both have used the same instance of the CssLoaderState class, they will have synced state
-export const GlobalStateContextProvider: FC<ProviderProps> = ({
-  children,
-  globalStateClass,
-}) => {
+export const GlobalStateContextProvider: FC<ProviderProps> = ({ children, globalStateClass }) => {
   const [publicState, setPublicState] = useState<PublicGlobalState>({
     ...globalStateClass.getPublicState(),
   });
@@ -241,13 +241,11 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({
 
     globalStateClass.eventBus.addEventListener("stateUpdate", onUpdate);
 
-    return () =>
-      globalStateClass.eventBus.removeEventListener("stateUpdate", onUpdate);
+    return () => globalStateClass.eventBus.removeEventListener("stateUpdate", onUpdate);
   }, []);
 
   const getGlobalState = (key: string) => globalStateClass.getGlobalState(key);
-  const setGlobalState = (key: string, data: any) =>
-    globalStateClass.setGlobalState(key, data);
+  const setGlobalState = (key: string, data: any) => globalStateClass.setGlobalState(key, data);
 
   return (
     <GlobalStateContext.Provider
