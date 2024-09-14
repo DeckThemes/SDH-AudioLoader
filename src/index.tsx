@@ -11,6 +11,7 @@ import {
   Tabs,
   afterPatch,
   SliderField,
+  ToggleField,
 } from "decky-frontend-lib";
 import { Permissions } from "./apiTypes";
 import { VFC, useMemo, useEffect } from "react";
@@ -36,6 +37,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     gamesRunning,
     soundPacks,
     menuMusic,
+    legacyEnabled,
     selectedMusic,
     soundVolume,
     musicVolume,
@@ -128,6 +130,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 selected_music: selectedMusic,
                 sound_volume: soundVolume,
                 music_volume: musicVolume,
+                legacy_enabled: legacyEnabled,
               };
               python.setConfig(configObj);
             }}
@@ -150,6 +153,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 selected_music: selectedMusic,
                 sound_volume: value,
                 music_volume: musicVolume,
+                legacy_enabled: legacyEnabled,
               };
               python.setConfig(configObj);
             }}
@@ -157,50 +161,75 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           />
         </PanelSectionRow>
         <PanelSectionRow>
-          <DropdownItem
-            bottomSeparator="none"
-            onMenuWillOpen={() => refetchLocalPacks()}
-            menuLabel="Music Pack"
-            rgOptions={MusicPackDropdownOptions}
-            selectedOption={
-              MusicPackDropdownOptions.find((e) => e.label === selectedMusic)?.data ?? -1
-            }
-            onChange={async (option) => {
-              const configObj = {
-                selected_pack: activeSound,
-                selected_music: option.label,
-                sound_volume: soundVolume,
-                music_volume: musicVolume,
-              };
-              python.setConfig(configObj);
-              restartMusicPlayer(option.label as string);
-            }}
-          />
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <SliderField
-            bottomSeparator="standard"
-            label={undefined}
-            value={musicVolume}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(value) => {
-              setGlobalState("musicVolume", value);
-              menuMusic.volume = value;
-              // @ts-ignore
-              window.AUDIOLOADER_MENUMUSIC.volume = value;
+          <ToggleField
+            label="Enable Legacy Features"
+            description="Legacy features are unsupported by Audio Loader maintainers. They may break at any time. Issues should be reported on our GitHub. Please do not reach out to us on Discord regarding legacy feature issues."
+            checked={legacyEnabled}
+            onChange={(value: boolean) => {
+              setGlobalState("legacyEnabled", value);
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: selectedMusic,
                 sound_volume: soundVolume,
-                music_volume: value,
+                music_volume: musicVolume,
+                legacy_enabled: value,
               };
               python.setConfig(configObj);
+              restartMusicPlayer(value ? selectedMusic : "None");
             }}
-            icon={<FaMusic style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }} />}
           />
         </PanelSectionRow>
+        {legacyEnabled && (
+          <>
+            <PanelSectionRow>
+              <DropdownItem
+                bottomSeparator="none"
+                onMenuWillOpen={() => refetchLocalPacks()}
+                menuLabel="Music Pack"
+                rgOptions={MusicPackDropdownOptions}
+                selectedOption={
+                  MusicPackDropdownOptions.find((e) => e.label === selectedMusic)?.data ?? -1
+                }
+                onChange={async (option) => {
+                  const configObj = {
+                    selected_pack: activeSound,
+                    selected_music: option.label,
+                    sound_volume: soundVolume,
+                    music_volume: musicVolume,
+                    legacy_enabled: legacyEnabled,
+                  };
+                  python.setConfig(configObj);
+                  restartMusicPlayer(legacyEnabled ? (option.label as string) : "None");
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <SliderField
+                bottomSeparator="standard"
+                label={undefined}
+                value={musicVolume}
+                min={0}
+                max={1}
+                step={0.01}
+                onChange={(value) => {
+                  setGlobalState("musicVolume", value);
+                  menuMusic.volume = value;
+                  // @ts-ignore
+                  window.AUDIOLOADER_MENUMUSIC.volume = value;
+                  const configObj = {
+                    selected_pack: activeSound,
+                    selected_music: selectedMusic,
+                    sound_volume: soundVolume,
+                    music_volume: value,
+                    legacy_enabled: legacyEnabled,
+                  };
+                  python.setConfig(configObj);
+                }}
+                icon={<FaMusic style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }} />}
+              />
+            </PanelSectionRow>
+          </>
+        )}
       </PanelSection>
       <PanelSection title="Settings">
         <PanelSectionRow>
@@ -361,16 +390,26 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configSelectedMusic = data?.selected_music || "None";
       const configSoundVolume = data?.sound_volume ?? 1;
       const configMusicVolume = data?.music_volume ?? 0.5;
+      const configLegacyEnabled = data?.legacy_enabled ?? false;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
       setGlobalState("selectedMusic", configSelectedMusic);
       setGlobalState("soundVolume", configSoundVolume);
       setGlobalState("musicVolume", configMusicVolume);
+      setGlobalState("legacyEnabled", configLegacyEnabled);
 
       const { soundPacks } = state.getPublicState();
 
-      // Plays menu music initially
-      changeMenuMusic(configSelectedMusic, null, setGlobalState, [], soundPacks, configMusicVolume);
+      // Plays menu music initially only if legacy settings are enabled
+      if (configLegacyEnabled)
+        changeMenuMusic(
+          configSelectedMusic,
+          null,
+          setGlobalState,
+          [],
+          soundPacks,
+          configMusicVolume
+        );
     });
   });
 

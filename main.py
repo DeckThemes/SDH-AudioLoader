@@ -12,7 +12,8 @@ starter_config_data = {
   "selected_pack": "Default",
   "selected_music": "None",
   "sound_volume": 1,
-  "music_volume": 0.5
+  "music_volume": 0.5,
+  "legacy_enabled": False
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -225,7 +226,8 @@ class Plugin:
             "selected_pack": "Default", 
             "selected_music": "None",
             "sound_volume": 1,
-            "music_volume": 0.5
+            "music_volume": 0.5,
+            "legacy_enabled": False
         }
 
         Log("Initializing Audio Loader...")
