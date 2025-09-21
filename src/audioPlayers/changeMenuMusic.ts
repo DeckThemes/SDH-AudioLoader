@@ -1,9 +1,152 @@
-import { Mappings, Pack } from "../classes";
+import { DeckSound, Mappings, Pack } from "../classes";
 
-function findMapping(origFileName: string, mappings: Mappings | undefined): string {
-  if (mappings && Object.keys(mappings || {}).includes(origFileName)) {
-    const randIndex = Math.trunc(Math.random() * mappings[origFileName].length);
-    return mappings[origFileName][randIndex];
+export interface MenuMusicController {
+  play(): void;
+  pause(): void;
+  destroy(): void;
+  volume: number;
+  currentTime: number;
+}
+
+class WebAudioMenuMusic implements MenuMusicController {
+  private context: AudioContext;
+  private gainNode: GainNode;
+  private source: AudioBufferSourceNode | null = null;
+  private mainBuffer: AudioBuffer;
+  private introBuffer: AudioBuffer | null;
+  private isPlaying: boolean = false;
+  private startedAtSec: number = 0;
+  private offsetSec: number = 0;
+  private currentTrack: "intro" | "main";
+
+  constructor(
+    context: AudioContext,
+    gainNode: GainNode,
+    mainBuffer: AudioBuffer,
+    introBuffer: AudioBuffer | null,
+    initialVolume: number
+  ) {
+    this.context = context;
+    this.gainNode = gainNode;
+    this.mainBuffer = mainBuffer;
+    this.introBuffer = introBuffer;
+    this.currentTrack = introBuffer ? "intro" : "main";
+    this.gainNode.gain.value = initialVolume;
+
+    // Start immediately
+    this.startCurrentTrack();
+  }
+
+  private get activeBuffer(): AudioBuffer {
+    return this.currentTrack === "intro" && this.introBuffer ? this.introBuffer : this.mainBuffer;
+  }
+
+  private startCurrentTrack() {
+    // Stop exiting source (like going from intro to main)
+    if (this.source) {
+      try {
+        this.source.onended = null;
+        this.source.stop();
+      } catch {}
+      try {
+        this.source.disconnect();
+      } catch {}
+      this.source = null;
+    }
+
+    const buffer = this.activeBuffer;
+    const bufferSource = this.context.createBufferSource();
+    bufferSource.buffer = buffer;
+    bufferSource.loop = this.currentTrack === "main";
+    bufferSource.connect(this.gainNode);
+
+    if (this.currentTrack === "intro") {
+      bufferSource.onended = () => {
+        // Move to main, reset offset, and start looping
+        this.currentTrack = "main";
+        this.offsetSec = 0;
+        this.startCurrentTrack();
+      };
+    }
+
+    const offset = Math.max(0, this.offsetSec % buffer.duration);
+    bufferSource.start(0, offset);
+
+    this.source = bufferSource;
+    this.startedAtSec = this.context.currentTime;
+    this.isPlaying = true;
+  }
+
+  play(): void {
+    if (this.isPlaying) return;
+    this.startCurrentTrack();
+  }
+
+  pause(): void {
+    if (!this.isPlaying) return;
+    // accumulate offset elapsed since start
+    this.offsetSec =
+      (this.offsetSec + (this.context.currentTime - this.startedAtSec)) %
+      this.activeBuffer.duration;
+    try {
+      this.source?.stop();
+    } catch {}
+    this.source = null;
+    this.isPlaying = false;
+  }
+
+  destroy(): void {
+    try {
+      this.source?.stop();
+    } catch {}
+    try {
+      this.source?.disconnect();
+    } catch {}
+    try {
+      this.gainNode.disconnect();
+    } catch {}
+    try {
+      this.context.close();
+    } catch {}
+    this.isPlaying = false;
+  }
+
+  get volume(): number {
+    return this.gainNode.gain.value;
+  }
+
+  set volume(value: number) {
+    this.gainNode.gain.setValueAtTime(value, this.context.currentTime + 0.01);
+  }
+
+  get currentTime(): number {
+    if (this.isPlaying) {
+      return (
+        (this.offsetSec + (this.context.currentTime - this.startedAtSec)) %
+        this.activeBuffer.duration
+      );
+    }
+    return this.offsetSec % this.activeBuffer.duration;
+  }
+
+  set currentTime(value: number) {
+    const buffer = this.activeBuffer;
+    // Clamp to [0, duration)
+    const clamped = Math.max(0, Math.min(buffer.duration - 0.000001, value));
+    this.offsetSec = clamped;
+    if (this.isPlaying) {
+      this.startCurrentTrack();
+    }
+  }
+}
+
+function findMapping(origFileName: DeckSound, mappings: Mappings | undefined): string {
+  if (!mappings) return origFileName;
+  const typedMap = mappings as Partial<Record<DeckSound, string[]>>;
+  const candidates = typedMap[origFileName];
+  if (candidates && candidates.length > 0) {
+    const randIndex = Math.trunc(Math.random() * candidates.length);
+    return candidates[randIndex];
   }
   return origFileName;
 }
@@ -12,9 +155,9 @@ function createFullPath(fileName: string, truncatedPackPath: string | undefined)
   return `/sounds_custom/${truncatedPackPath || "error"}/${fileName}`;
 }
 
-export function changeMenuMusic(
+export async function changeMenuMusic(
   newMusic: string,
-  menuMusic: HTMLAudioElement | null,
+  menuMusic: MenuMusicController | null,
   setGlobalState: (key: string, value: any) => void,
   gamesRunning: any,
   soundPacks: Pack[],
@@ -22,16 +165,22 @@ export function changeMenuMusic(
 ) {
   setGlobalState("selectedMusic", newMusic);
 
-  // Stops the old music
+  // Stop and clear the old music
   if (menuMusic !== null) {
-    menuMusic.pause();
-    menuMusic.currentTime = 0;
+    try {
+      menuMusic.pause();
+      menuMusic.currentTime = 0;
+      // Cleanup audio resources if available
+      // @ts-ignore
+      if (typeof menuMusic.destroy === "function") menuMusic.destroy();
+    } catch {}
     setGlobalState("menuMusic", null);
   }
 
   // Start the new one, if the user selected a music at all
   if (newMusic !== "None" && gamesRunning.length === 0) {
     const currentPack = soundPacks.find((e) => e.name === newMusic);
+    if (!currentPack) return;
 
     const musicFilePath = createFullPath(
       findMapping("menu_music.mp3", currentPack?.mappings),
@@ -42,52 +191,46 @@ export function changeMenuMusic(
       currentPack?.truncatedPackPath
     );
 
-    let newMenuMusic: HTMLAudioElement;
+    // Prepare Web Audio graph
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const musicGain = new GainNode(audioContext, { gain: musicVolume });
+    musicGain.connect(audioContext.destination);
 
-    // If there is an intro, it must play that, and add an onended listener to change to the normal music
-    // If there's no intro, it can just go straight to playAndLoopMenuMusic()
-    if (currentPack?.hasIntro) {
-      function handleIntroEnd() {
-        newMenuMusic.currentTime = 0;
-        newMenuMusic.src = musicFilePath;
-        newMenuMusic.onended = null;
-        playAndLoopMenuMusic();
-      }
-      newMenuMusic = new Audio(introFilePath);
-      newMenuMusic.onended = handleIntroEnd;
-      newMenuMusic.volume = musicVolume;
-      newMenuMusic.play();
-      createWindowObject(newMenuMusic);
-    } else {
-      newMenuMusic = new Audio(musicFilePath);
-      playAndLoopMenuMusic();
-    }
+    const fetchAndDecode = async (url: string): Promise<AudioBuffer> => {
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      return await audioContext.decodeAudioData(arrayBuffer);
+    };
 
-    function playAndLoopMenuMusic(wasFromIntro: boolean = false) {
-      newMenuMusic.play();
-      newMenuMusic.loop = true;
-      // If someone has changed the volume before the intro ended, this would overwrite it with the original as this function does not have up to date data
-      if (!wasFromIntro) {
-        newMenuMusic.volume = musicVolume;
-      }
-      createWindowObject(newMenuMusic);
-    }
+    // Load buffers
+    const [mainBuffer, maybeIntroBuffer] = await Promise.all([
+      fetchAndDecode(musicFilePath),
+      currentPack?.hasIntro ? fetchAndDecode(introFilePath) : Promise.resolve(null as any),
+    ]);
 
-    // Self explanatory, just extracted it to a function so that I can run it once on the intro, and once on the menu music
-    // TODO: Not actually sure if it needs to be set the 2nd time
-    function createWindowObject(menuMusic: HTMLAudioElement) {
-      const setVolume = (value: number) => {
-        menuMusic.volume = value;
-      };
-      // @ts-ignore
-      window.AUDIOLOADER_MENUMUSIC = {
-        play: menuMusic.play.bind(menuMusic),
-        pause: menuMusic.pause.bind(menuMusic),
-        origVolume: menuMusic.volume,
+    const controller = new WebAudioMenuMusic(
+      audioContext,
+      musicGain,
+      mainBuffer,
+      currentPack?.hasIntro ? maybeIntroBuffer : null,
+      musicVolume
+    );
+
+    // Expose controls on window for debugging/external control
+    // @ts-ignore
+    window.AUDIOLOADER_MENUMUSIC = {
+      play: controller.play.bind(controller),
+      pause: controller.pause.bind(controller),
+      origVolume: musicVolume,
+      setVolume: (value: number) => {
+        controller.volume = value;
+        // Keep a live volume property for convenience
         // @ts-ignore
-        setVolume: setVolume.bind(this),
-      };
-      setGlobalState("menuMusic", menuMusic);
-    }
+        window.AUDIOLOADER_MENUMUSIC.volume = value;
+      },
+      volume: musicVolume,
+    };
+
+    setGlobalState("menuMusic", controller);
   }
 }

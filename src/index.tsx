@@ -1,35 +1,35 @@
 import {
+  afterPatch,
+  beforePatch,
   ButtonItem,
   definePlugin,
+  DropdownItem,
   PanelSection,
   PanelSectionRow,
-  ServerAPI,
-  staticClasses,
-  DropdownItem,
   Router,
-  beforePatch,
-  Tabs,
-  afterPatch,
+  ServerAPI,
   SliderField,
+  staticClasses,
+  Tabs,
   ToggleField,
 } from "decky-frontend-lib";
-import { Permissions } from "./apiTypes";
-import { VFC, useMemo, useEffect } from "react";
+import { useEffect, useMemo, VFC } from "react";
+import { FaMusic, FaVolumeUp } from "react-icons/fa";
 import { RiFolderMusicFill } from "react-icons/ri";
-import { FaVolumeUp, FaMusic } from "react-icons/fa";
+import * as api from "./api";
+import { Permissions } from "./apiTypes";
+import { changeMenuMusic } from "./audioPlayers";
 import { AudioParent } from "./gamepadAudioFinder";
 import {
-  UninstallPage,
+  ExpandedViewPage,
+  PackBrowserPage,
   SettingsPage,
   StarredPacksPage,
   SubmissionsPage,
-  PackBrowserPage,
-  ExpandedViewPage,
+  UninstallPage,
 } from "./pack-manager";
 import * as python from "./python";
-import * as api from "./api";
 import { GlobalState, GlobalStateContextProvider, useGlobalState } from "./state/GlobalState";
-import { changeMenuMusic } from "./audioPlayers";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
@@ -213,7 +213,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 step={0.01}
                 onChange={(value) => {
                   setGlobalState("musicVolume", value);
-                  menuMusic.volume = value;
+                  menuMusic?.volume && (menuMusic.volume = value);
                   // @ts-ignore
                   window.AUDIOLOADER_MENUMUSIC.volume = value;
                   const configObj = {
@@ -405,6 +405,7 @@ export default definePlugin((serverApi: ServerAPI) => {
         changeMenuMusic(
           configSelectedMusic,
           null,
+          // @ts-ignore
           setGlobalState,
           [],
           soundPacks,

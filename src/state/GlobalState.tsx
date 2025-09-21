@@ -2,14 +2,15 @@ import { SingleDropdownOption } from "decky-frontend-lib";
 import { createContext, FC, useContext, useEffect, useState } from "react";
 import {
   AccountData,
-  ThemeQueryResponse,
   FilterQueryResponse,
-  ThemeQueryRequest,
   PartialCSSThemeInfo,
+  ThemeQueryRequest,
+  ThemeQueryResponse,
 } from "../apiTypes";
+import { MenuMusicController } from "../audioPlayers";
 import { Pack, packDbEntry } from "../classes";
 
-interface PublicGlobalState {
+export interface PublicGlobalState {
   // API
   apiUrl: string;
   apiShortToken: string;
@@ -40,7 +41,7 @@ interface PublicGlobalState {
 
   dummyFuncResult: boolean;
   legacyEnabled: boolean;
-  menuMusic: any;
+  menuMusic: MenuMusicController | null;
   soundPatchInstance: any;
   volumePatchInstance: any;
   gainNode: any;
@@ -136,7 +137,7 @@ export class GlobalState {
   private submissionThemeList: ThemeQueryResponse = { total: 0, items: [] };
 
   private dummyFuncResult: boolean = false;
-  private menuMusic: any = null;
+  private menuMusic: MenuMusicController | null = null;
   private soundPatchInstance: any = null;
   private volumePatchInstance: any = null;
   private legacyEnabled: boolean = false;
@@ -207,11 +208,12 @@ export class GlobalState {
     };
   }
 
-  getGlobalState(key: string) {
+  getGlobalState(key: keyof PublicGlobalState) {
     return this[key];
   }
 
-  setGlobalState(key: string, data: any) {
+  setGlobalState(key: keyof PublicGlobalState, data: any) {
+    // @ts-ignore
     this[key] = data;
     this.forceUpdate();
   }
@@ -244,8 +246,9 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({ children, global
     return () => globalStateClass.eventBus.removeEventListener("stateUpdate", onUpdate);
   }, []);
 
-  const getGlobalState = (key: string) => globalStateClass.getGlobalState(key);
-  const setGlobalState = (key: string, data: any) => globalStateClass.setGlobalState(key, data);
+  const getGlobalState = (key: keyof PublicGlobalState) => globalStateClass.getGlobalState(key);
+  const setGlobalState = (key: keyof PublicGlobalState, data: any) =>
+    globalStateClass.setGlobalState(key, data);
 
   return (
     <GlobalStateContext.Provider

@@ -1,8 +1,8 @@
 import { ServerAPI } from "decky-frontend-lib";
-import { GlobalState } from "./state";
-import { toast, storeWrite } from "./python";
 import { ThemeQueryRequest, ThemeQueryResponse } from "./apiTypes";
 import { generateParamStr } from "./logic";
+import { storeWrite, toast } from "./python";
+import { GlobalState, PublicGlobalState } from "./state";
 
 var server: ServerAPI | undefined = undefined;
 var globalState: GlobalState | undefined = undefined;
@@ -23,14 +23,10 @@ export function logOut(): void {
   storeWrite("shortToken", "");
 }
 
-export function logInWithShortToken(
-  shortTokenInterimValue?: string | undefined
-): void {
+export function logInWithShortToken(shortTokenInterimValue?: string | undefined): void {
   const { apiUrl, apiShortToken } = globalState!.getPublicState();
   console.log("test", shortTokenInterimValue);
-  const shortTokenValue = shortTokenInterimValue
-    ? shortTokenInterimValue
-    : apiShortToken;
+  const shortTokenValue = shortTokenInterimValue ? shortTokenInterimValue : apiShortToken;
   const setGlobalState = globalState!.setGlobalState.bind(globalState);
   if (shortTokenValue.length === 12) {
     server!
@@ -62,10 +58,7 @@ export function logInWithShortToken(
           storeWrite("shortToken", shortTokenValue);
           setGlobalState("apiShortToken", shortTokenValue);
           setGlobalState("apiFullToken", data.token);
-          setGlobalState(
-            "apiTokenExpireDate",
-            new Date().valueOf() + 1000 * 60 * 10
-          );
+          setGlobalState("apiTokenExpireDate", new Date().valueOf() + 1000 * 60 * 10);
           genericGET(`/auth/me`, true, data.token).then((meData) => {
             if (meData?.username) {
               setGlobalState("apiMeData", meData);
@@ -86,8 +79,7 @@ export function logInWithShortToken(
 
 // This returns the token that is intended to be used in whatever call
 export function refreshToken(): Promise<string | undefined> {
-  const { apiFullToken, apiTokenExpireDate, apiUrl } =
-    globalState!.getPublicState();
+  const { apiFullToken, apiTokenExpireDate, apiUrl } = globalState!.getPublicState();
   const setGlobalState = globalState!.setGlobalState.bind(globalState);
   if (!apiFullToken) {
     return Promise.resolve(undefined);
@@ -126,10 +118,7 @@ export function refreshToken(): Promise<string | undefined> {
     })
     .then((token) => {
       setGlobalState("apiFullToken", token);
-      setGlobalState(
-        "apiTokenExpireDate",
-        new Date().valueOf() + 1000 * 10 * 60
-      );
+      setGlobalState("apiTokenExpireDate", new Date().valueOf() + 1000 * 10 * 60);
       return token;
     })
     .catch((err) => {
@@ -196,7 +185,7 @@ export async function genericGET(
 export function getThemes(
   searchOpts: ThemeQueryRequest,
   apiPath: string,
-  globalStateVarName: string,
+  globalStateVarName: keyof PublicGlobalState,
   setSnapIndex: (i: number) => void,
   requiresAuth: boolean = false
 ) {
@@ -205,24 +194,17 @@ export function getThemes(
     searchOpts.filters !== "All" ? searchOpts : { ...searchOpts, filters: "" },
     "AUDIO."
   );
-  genericGET(`${apiPath}${queryStr}`, requiresAuth).then(
-    (data: ThemeQueryResponse) => {
-      if (data.total > 0) {
-        setGlobalState(globalStateVarName, data);
-      } else {
-        setGlobalState(globalStateVarName, { total: 0, items: [] });
-      }
-      setSnapIndex(-1);
+  genericGET(`${apiPath}${queryStr}`, requiresAuth).then((data: ThemeQueryResponse) => {
+    if (data.total > 0) {
+      setGlobalState(globalStateVarName, data);
+    } else {
+      setGlobalState(globalStateVarName, { total: 0, items: [] });
     }
-  );
+    setSnapIndex(-1);
+  });
 }
 
-export function toggleStar(
-  themeId: string,
-  isStarred: boolean,
-  authToken: string,
-  apiUrl: string
-) {
+export function toggleStar(themeId: string, isStarred: boolean, authToken: string, apiUrl: string) {
   return server!
     .fetchNoCors<Response>(`${apiUrl}/users/me/stars/${themeId}`, {
       method: isStarred ? "DELETE" : "POST",
