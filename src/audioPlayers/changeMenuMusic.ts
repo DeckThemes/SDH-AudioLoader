@@ -2,8 +2,9 @@ import { Mappings, Pack } from "../classes";
 
 function findMapping(origFileName: string, mappings: Mappings | undefined): string {
   if (mappings && Object.keys(mappings || {}).includes(origFileName)) {
-    const randIndex = Math.trunc(Math.random() * mappings[origFileName].length);
-    return mappings[origFileName][randIndex];
+    const mappedFiles: string[] = mappings[origFileName as keyof Mappings];
+    const randIndex = Math.trunc(Math.random() * mappedFiles.length);
+    return mappedFiles[randIndex];
   }
   return origFileName;
 }

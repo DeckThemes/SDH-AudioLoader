@@ -366,12 +366,14 @@ export default definePlugin((serverApi: ServerAPI) => {
           }
           // Mapping check
           if (Object.keys(currentPack?.mappings || {}).includes(soundName)) {
-            const randIndex = Math.trunc(Math.random() * currentPack?.mappings[soundName].length);
-            const mappedFileName = currentPack?.mappings[soundName][randIndex];
-            newSoundURL = `/sounds_custom/${
-              currentPack?.truncatedPackPath || "/error"
-            }/${mappedFileName}`;
-            break;
+            const mappings = currentPack?.mappings?.[soundName as keyof typeof currentPack.mappings] as string[] | undefined;
+            if (Array.isArray(mappings) && mappings.every(item => typeof item === 'string')) {
+              const randIndex = Math.trunc(Math.random() * mappings.length);
+              const mappedFileName = mappings[randIndex];
+              newSoundURL = `/sounds_custom/${currentPack?.truncatedPackPath || "/error"
+                }/${mappedFileName}`;
+              break;
+            }
           }
           // Default path-replacing behavior
           newSoundURL = args[0].replace(
