@@ -1,35 +1,35 @@
 import {
+  afterPatch,
+  beforePatch,
   ButtonItem,
   definePlugin,
+  DropdownItem,
   PanelSection,
   PanelSectionRow,
-  ServerAPI,
-  staticClasses,
-  DropdownItem,
   Router,
-  beforePatch,
-  Tabs,
-  afterPatch,
+  ServerAPI,
   SliderField,
+  staticClasses,
+  Tabs,
   ToggleField,
 } from "decky-frontend-lib";
-import { Permissions } from "./apiTypes";
-import { VFC, useMemo, useEffect } from "react";
+import { useEffect, useMemo, VFC } from "react";
+import { FaMusic, FaVolumeUp } from "react-icons/fa";
 import { RiFolderMusicFill } from "react-icons/ri";
-import { FaVolumeUp, FaMusic } from "react-icons/fa";
+import * as api from "./api";
+import { Permissions } from "./apiTypes";
+import { changeMenuMusic } from "./audioPlayers";
 import { AudioParent } from "./gamepadAudioFinder";
 import {
-  UninstallPage,
+  ExpandedViewPage,
+  PackBrowserPage,
   SettingsPage,
   StarredPacksPage,
   SubmissionsPage,
-  PackBrowserPage,
-  ExpandedViewPage,
+  UninstallPage,
 } from "./pack-manager";
 import * as python from "./python";
-import * as api from "./api";
 import { GlobalState, GlobalStateContextProvider, useGlobalState } from "./state/GlobalState";
-import { changeMenuMusic } from "./audioPlayers";
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
@@ -307,6 +307,7 @@ const PackManagerRouter: VFC = () => {
 };
 
 export default definePlugin((serverApi: ServerAPI) => {
+  console.log("DEFINE PLUGIN CALL");
   const state: GlobalState = new GlobalState();
   python.setServer(serverApi);
   python.setStateClass(state);
@@ -323,18 +324,19 @@ export default definePlugin((serverApi: ServerAPI) => {
   const soundVolumePatchInstance = afterPatch(
     AudioParent.m_GamepadUIAudioStore.m_AudioPlaybackManager.__proto__,
     "GetActiveDestination",
-    function (_, ret) {
-      const { soundVolume } = state.getPublicState();
-      const setGlobalState = state.setGlobalState.bind(state);
-      // @ts-ignore
-      const gainNode = new GainNode(this.context, { gain: soundVolume });
-      gainNode.connect(ret);
+    async function (_, ret) {
       try {
+        const { soundVolume } = state.getPublicState();
+        const setGlobalState = state.setGlobalState.bind(state);
+        // @ts-ignore
+        const gainNode = new GainNode(this.context, { gain: soundVolume });
+        gainNode.connect(await ret);
         setGlobalState("gainNode", gainNode);
+        return gainNode;
       } catch (e) {
-        console.log(e);
+        console.log("Audio Loader could not set gain node for sound effect volume", e);
       }
-      return gainNode;
+      return null;
     }
   );
   const setGlobalState = state.setGlobalState.bind(state);
