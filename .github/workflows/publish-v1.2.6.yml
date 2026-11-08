@@ -1,0 +1,167 @@
+name: Publish Audio Loader Encore v1.2.6
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-encore-v1-2-6
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify permanent Low-Pass integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s src/audioPlayers/lowPass.ts
+          grep -q 'configureMusicLowPass' src/index.tsx
+          grep -q 'setMusicLowPassPlayer' src/audioPlayers/changeMenuMusic.ts
+          grep -q 'Context-aware Music Low-Pass Filter' README.md
+
+      - name: Check tag and release are unused
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin refs/tags/v1.2.6 >/dev/null 2>&1; then
+            echo 'Tag v1.2.6 already exists. Refusing to overwrite a published version.'
+            exit 1
+          fi
+          if gh release view v1.2.6 >/dev/null 2>&1; then
+            echo 'Release v1.2.6 already exists. Refusing to overwrite it.'
+            exit 1
+          fi
+
+      - name: Set version to 1.2.6
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          package = Path('package.json')
+          package_text = package.read_text()
+          old_package = '"version": "1.2.5"'
+          new_package = '"version": "1.2.6"'
+          if new_package not in package_text:
+              if package_text.count(old_package) != 1:
+                  raise SystemExit('Could not safely locate package.json version 1.2.5')
+              package_text = package_text.replace(old_package, new_package, 1)
+              package.write_text(package_text)
+
+          build_tag = Path('src/audioPlayers/musicGuard.ts')
+          source = build_tag.read_text()
+          old_tag = 'export const BUILD_TAG = "v1.2.5";'
+          new_tag = 'export const BUILD_TAG = "v1.2.6";'
+          if new_tag not in source:
+              if source.count(old_tag) != 1:
+                  raise SystemExit('Could not safely locate BUILD_TAG v1.2.5')
+              source = source.replace(old_tag, new_tag, 1)
+              build_tag.write_text(source)
+          PY
+
+          grep -q '"version": "1.2.6"' package.json
+          grep -q 'export const BUILD_TAG = "v1.2.6";' src/audioPlayers/musicGuard.ts
+          git diff --check
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build production plugin
+        run: |
+          set -euo pipefail
+          pnpm build
+          test -s dist/index.js
+          grep -q 'lowPass' dist/index.js
+
+      - name: Package Decky plugin
+        run: |
+          set -euo pipefail
+          mkdir -p "out/Audio Loader Encore"
+          cp -r dist "out/Audio Loader Encore/"
+          cp main.py audio_utils.py audio_remoteinstall.py plugin.json package.json LICENSE README.md "out/Audio Loader Encore/"
+          cd out
+          zip -qr "$GITHUB_WORKSPACE/Audio-Loader-Encore.zip" "Audio Loader Encore"
+          test -s "$GITHUB_WORKSPACE/Audio-Loader-Encore.zip"
+          unzip -l "$GITHUB_WORKSPACE/Audio-Loader-Encore.zip" | grep -q 'Audio Loader Encore/dist/index.js'
+
+      - name: Commit version updates to main
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json src/audioPlayers/musicGuard.ts
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m 'Release v1.2.6: context-aware music low-pass filter'
+            git push origin HEAD:main
+          fi
+
+      - name: Create v1.2.6 tag
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git tag v1.2.6 origin/main
+          git push origin refs/tags/v1.2.6
+
+      - name: Create stable GitHub release and upload plugin
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          Adds a context-aware low-pass filter to Encore-managed menu music.
+
+          ## Context-aware Music Low-Pass Filter
+          - Independent toggles for Steam foreground menus / overlay and game launch / loading.
+          - Master enable toggle and adjustable 0-100% filter-strength slider.
+          - Smooth filter transitions and persistent settings.
+          - Only Encore-managed menu music is processed; Steam UI sound effects and game audio are not intentionally modified.
+
+          Steam does not expose a stable public event that identifies every individual foreground popup. The foreground-menu setting therefore uses Game Mode window focus changes as its detection signal. Game launch detection uses Steam game-action notifications.
+
+          ## Existing Encore features
+          Includes the existing music rotation, random selection, Now Playing, startup movie wait, volume normalization, and sleep/wake music recovery features.
+
+          ## Build and testing
+          Production build and packaging completed successfully through GitHub Actions. Runtime testing on Steam Deck is still pending.
+
+          ## Installation
+          Download `Audio-Loader-Encore.zip` from the Assets section. In Decky Loader, enable Developer Mode, open Developer, and choose **Install Plugin from ZIP File**. Uninstall the original Audio Loader first if it is still installed.
+          NOTES
+
+          gh release create v1.2.6 Audio-Loader-Encore.zip \
+            --title 'SDH Audio Loader Encore v1.2.6' \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --target main
+
+      - name: Upload build artifact for retention
+        uses: actions/upload-artifact@v4
+        with:
+          name: Audio-Loader-Encore-v1.2.6
+          path: Audio-Loader-Encore.zip
+          if-no-files-found: error
+          retention-days: 30
