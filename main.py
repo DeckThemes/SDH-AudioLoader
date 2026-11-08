@@ -13,7 +13,12 @@ starter_config_data = {
   "selected_music": "None",
   "sound_volume": 1,
   "music_volume": 0.5,
-  "legacy_enabled": False
+  "legacy_enabled": False,
+  "daily_random_music": False,
+  "daily_music_date": "",
+  "daily_music_pick": "",
+  "random_music_every_replay": False,
+  "new_song_every_replay": False
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -111,6 +116,11 @@ class Plugin:
     async def get_loader_version(self) -> int:
         return AUDIO_LOADER_VERSION
 
+    async def log_message(self, message: str) -> bool:
+        # Lets the screen side write into the Decky log, to help find problems
+        Log("Audio Loader (screen) - {}".format(message))
+        return True
+
     async def get_sound_packs(self) -> list:
         return [x.to_dict() for x in self.soundPacks]
 
@@ -134,10 +144,19 @@ class Plugin:
         Log("Audio Loader - Setting config file at {}".format(configPath))
         if (os.path.exists(configPath)):
             Log("Audio Loader - Found config file")
-            json_string = json.dumps(configObj)
+            # Merge into the saved config so settings the caller did not send
+            # (like the daily music settings) are never lost
+            merged = {}
+            try:
+                with open(configPath, "r") as fp:
+                    merged = json.load(fp)
+            except Exception as e:
+                Log("Audio Loader - Could not read old config, starting fresh: {}".format(e))
+            merged.update(configObj)
+            self.config = merged
             with open(configPath, "w") as fp:
-                fp.write(json_string)
-                return True
+                fp.write(json.dumps(merged))
+            return True
 
     # async def download_pack(self, uuid: str) -> dict:
     #     return (await self.remote.install(uuid)).to_dict()
@@ -227,7 +246,12 @@ class Plugin:
             "selected_music": "None",
             "sound_volume": 1,
             "music_volume": 0.5,
-            "legacy_enabled": False
+            "legacy_enabled": False,
+            "daily_random_music": False,
+            "daily_music_date": "",
+            "daily_music_pick": "",
+            "random_music_every_replay": False,
+            "new_song_every_replay": False
         }
 
         Log("Initializing Audio Loader...")

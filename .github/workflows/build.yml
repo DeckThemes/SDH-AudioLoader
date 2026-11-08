@@ -1,0 +1,56 @@
+name: Build plugin
+
+# Runs by itself whenever you upload changes, and also has a "Run workflow" button.
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      # Stop with a clear error if the build did not produce the plugin file
+      - name: Check build output
+        run: test -s dist/index.js
+
+      # Collect only the files the Steam Deck needs, in a folder named "Audio Loader Encore"
+      - name: Collect plugin files
+        run: |
+          mkdir -p "out/Audio Loader Encore"
+          cp -r dist "out/Audio Loader Encore/"
+          cp main.py audio_utils.py audio_remoteinstall.py plugin.json package.json LICENSE README.md "out/Audio Loader Encore/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Audio-Loader-Encore-built
+          path: out
+
+      # When a version tag like v1.0.0 is pushed, also publish a zip on the Releases page
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          zip -r "../Audio-Loader-Encore-${GITHUB_REF_NAME}.zip" "Audio Loader Encore"
+          cd ..
+          gh release create "$GITHUB_REF_NAME" "Audio-Loader-Encore-${GITHUB_REF_NAME}.zip" --title "Audio Loader Encore ${GITHUB_REF_NAME}" --notes "Unzip, and copy the folder 'Audio Loader Encore' into /home/deck/homebrew/plugins/ (remove the original Audio Loader first). See the README for the details."

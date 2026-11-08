@@ -18,7 +18,14 @@ import { FaMusic, FaVolumeUp } from "react-icons/fa";
 import { RiFolderMusicFill } from "react-icons/ri";
 import * as api from "./api";
 import { Permissions } from "./apiTypes";
-import { changeMenuMusic } from "./audioPlayers";
+import {
+  changeMenuMusic,
+  getTodayKey,
+  pickReplayMusic,
+  pickTodaysMusic,
+  playRandomMusic,
+  startMusicGuard,
+} from "./audioPlayers";
 import { AudioParent } from "./gamepadAudioFinder";
 import {
   ExpandedViewPage,
@@ -39,6 +46,11 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     menuMusic,
     legacyEnabled,
     selectedMusic,
+    dailyRandomMusic,
+    dailyMusicDate,
+    dailyMusicPick,
+    replayRandomMusic,
+    replaySong,
     soundVolume,
     musicVolume,
     gainNode,
@@ -167,15 +179,26 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             checked={legacyEnabled}
             onChange={(value: boolean) => {
               setGlobalState("legacyEnabled", value);
+              // With "New Music Every Day" on, turning legacy back on also checks the date
+              let musicToPlay = selectedMusic;
+              if (value && dailyRandomMusic) {
+                const choice = pickTodaysMusic(
+                  soundPacks,
+                  dailyMusicDate,
+                  dailyMusicPick,
+                  setGlobalState
+                );
+                if (choice) musicToPlay = choice.pick;
+              }
               const configObj = {
                 selected_pack: activeSound,
-                selected_music: selectedMusic,
+                selected_music: musicToPlay,
                 sound_volume: soundVolume,
                 music_volume: musicVolume,
                 legacy_enabled: value,
               };
               python.setConfig(configObj);
-              restartMusicPlayer(value ? selectedMusic : "None");
+              restartMusicPlayer(value ? musicToPlay : "None");
             }}
           />
         </PanelSectionRow>
@@ -199,7 +222,52 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                     legacy_enabled: legacyEnabled,
                   };
                   python.setConfig(configObj);
+                  // If the music is picked by hand, that becomes today's music
+                  if (dailyRandomMusic) {
+                    const today = getTodayKey();
+                    setGlobalState("dailyMusicDate", today);
+                    setGlobalState("dailyMusicPick", option.label);
+                    python.setConfig({ daily_music_date: today, daily_music_pick: option.label });
+                  }
                   restartMusicPlayer(legacyEnabled ? (option.label as string) : "None");
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ToggleField
+                label="New Music Every Day"
+                description={`Picks a different music pack each day: today one, tomorrow another. Choosing None keeps the music off until the next day.`}
+                checked={dailyRandomMusic}
+                onChange={(value: boolean) => {
+                  setGlobalState("dailyRandomMusic", value);
+                  python.setConfig({ daily_random_music: value });
+                  if (value) {
+                    // Start fresh: choose a pack that is different from the one playing now
+                    const choice = pickTodaysMusic(soundPacks, "", selectedMusic, setGlobalState);
+                    if (choice && choice.pick !== selectedMusic) restartMusicPlayer(choice.pick);
+                  }
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ToggleField
+                label="New Music Every Replay"
+                description="Every time the music starts again (when it ends, after a game closes, or after the Deck wakes up), it switches to a different music pack. Works together with New Music Every Day."
+                checked={replayRandomMusic}
+                onChange={(value: boolean) => {
+                  setGlobalState("replayRandomMusic", value);
+                  python.setConfig({ random_music_every_replay: value });
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ToggleField
+                label="New Song Every Replay"
+                description="Every time the music starts again, it plays a different song from the same music pack (for packs that have more than one song). Can be used together with the other two."
+                checked={replaySong}
+                onChange={(value: boolean) => {
+                  setGlobalState("replaySong", value);
+                  python.setConfig({ new_song_every_replay: value });
                 }}
               />
             </PanelSectionRow>
@@ -395,19 +463,52 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configSoundVolume = data?.sound_volume ?? 1;
       const configMusicVolume = data?.music_volume ?? 0.5;
       const configLegacyEnabled = data?.legacy_enabled ?? false;
+      const configDailyRandom = data?.daily_random_music ?? false;
+      const configDailyDate = data?.daily_music_date ?? "";
+      const configDailyPick = data?.daily_music_pick ?? "";
+      const configReplay = data?.random_music_every_replay ?? false;
+      const configReplaySong = data?.new_song_every_replay ?? false;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
       setGlobalState("selectedMusic", configSelectedMusic);
       setGlobalState("soundVolume", configSoundVolume);
       setGlobalState("musicVolume", configMusicVolume);
       setGlobalState("legacyEnabled", configLegacyEnabled);
+      setGlobalState("dailyRandomMusic", configDailyRandom);
+      setGlobalState("dailyMusicDate", configDailyDate);
+      setGlobalState("dailyMusicPick", configDailyPick);
+      setGlobalState("replayRandomMusic", configReplay);
+      setGlobalState("replaySong", configReplaySong);
 
       const { soundPacks } = state.getPublicState();
+
+      // With "New Music Every Day" on, today's music replaces the saved selection
+      let musicToPlay = configSelectedMusic;
+      let newDay = false;
+      if (configLegacyEnabled && configDailyRandom) {
+        const choice = pickTodaysMusic(
+          soundPacks,
+          configDailyDate,
+          configDailyPick,
+          setGlobalState
+        );
+        if (choice) {
+          musicToPlay = choice.pick;
+          newDay = choice.isNew;
+        }
+      }
+
+      // With "New Music Every Replay" on, starting up counts as a replay too (the first music of
+      // a new day still comes from "New Music Every Day")
+      if (configLegacyEnabled && configReplay && !newDay && musicToPlay !== "None") {
+        const pick = pickReplayMusic(soundPacks, musicToPlay);
+        if (pick) musicToPlay = pick;
+      }
 
       // Plays menu music initially only if legacy settings are enabled
       if (configLegacyEnabled)
         changeMenuMusic(
-          configSelectedMusic,
+          musicToPlay,
           null,
           setGlobalState,
           [],
@@ -439,13 +540,20 @@ export default definePlugin((serverApi: ServerAPI) => {
 
           // I'm re-using the filter here because I don't believe the getPublicState() method will update the values if they are changed
           if (filteredGames.length === 0) {
-            if (menuMusic !== null) {
+            // With "New Music Every Replay" on, coming back from a game starts different music
+            if (playRandomMusic(state)) {
+              // new music started
+            } else if (menuMusic !== null) {
               menuMusic.play();
             }
           }
         }
       }
     });
+
+  // Keeps the music playing, and brings it back after the Deck wakes from sleep
+  // (see audioPlayers/musicGuard.ts)
+  const stopMusicGuard = startMusicGuard(state);
 
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
     <GlobalStateContextProvider globalStateClass={state}>
@@ -460,7 +568,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   ));
 
   return {
-    title: <div className={staticClasses.Title}>Audio Loader</div>,
+    title: <div className={staticClasses.Title}>Audio Loader Encore</div>,
     content: (
       <GlobalStateContextProvider globalStateClass={state}>
         <Content serverAPI={serverApi} />
@@ -478,6 +586,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       soundPatchInstance.unpatch();
       volumePatchInstance.unpatch();
       AppStateRegistrar.unregister();
+      stopMusicGuard();
     },
   };
 });

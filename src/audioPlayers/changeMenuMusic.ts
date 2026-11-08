@@ -1,10 +1,32 @@
 import { Mappings, Pack } from "../classes";
+import * as python from "../python";
 
-function findMapping(origFileName: string, mappings: Mappings | undefined): string {
+// Other plugins can pause the music through window.AUDIOLOADER_MENUMUSIC. The music guard must
+// not fight them, so a pause made that way is remembered here until play() is called again or
+// new music is started.
+export const menuMusicControl = { pausedByOtherPlugin: false };
+
+// A refused play() would otherwise disappear silently, so write it to the log
+function reportPlayError(error: any) {
+  python.logEvent(`The music player refused to play: ${error}`);
+}
+
+// The last file used for each pack, so a pack with several songs does not pick the same one twice
+const lastFileUsed: Record<string, string> = {};
+
+function findMapping(
+  origFileName: string,
+  mappings: Mappings | undefined,
+  packKey: string = ""
+): string {
   if (mappings && Object.keys(mappings || {}).includes(origFileName)) {
     const mappedFiles: string[] = mappings[origFileName as keyof Mappings];
-    const randIndex = Math.trunc(Math.random() * mappedFiles.length);
-    return mappedFiles[randIndex];
+    const key = `${packKey}/${origFileName}`;
+    const others = mappedFiles.filter((f) => f !== lastFileUsed[key]);
+    const pool = others.length > 0 ? others : mappedFiles;
+    const picked = pool[Math.trunc(Math.random() * pool.length)];
+    lastFileUsed[key] = picked;
+    return picked;
   }
   return origFileName;
 }
@@ -21,6 +43,7 @@ export function changeMenuMusic(
   soundPacks: Pack[],
   musicVolume: number
 ) {
+  menuMusicControl.pausedByOtherPlugin = false;
   setGlobalState("selectedMusic", newMusic);
 
   // Stops the old music
@@ -35,11 +58,11 @@ export function changeMenuMusic(
     const currentPack = soundPacks.find((e) => e.name === newMusic);
 
     const musicFilePath = createFullPath(
-      findMapping("menu_music.mp3", currentPack?.mappings),
+      findMapping("menu_music.mp3", currentPack?.mappings, currentPack?.truncatedPackPath),
       currentPack?.truncatedPackPath
     );
     const introFilePath = createFullPath(
-      findMapping("intro_music.mp3", currentPack?.mappings),
+      findMapping("intro_music.mp3", currentPack?.mappings, currentPack?.truncatedPackPath),
       currentPack?.truncatedPackPath
     );
 
@@ -57,7 +80,7 @@ export function changeMenuMusic(
       newMenuMusic = new Audio(introFilePath);
       newMenuMusic.onended = handleIntroEnd;
       newMenuMusic.volume = musicVolume;
-      newMenuMusic.play();
+      newMenuMusic.play().catch(reportPlayError);
       createWindowObject(newMenuMusic);
     } else {
       newMenuMusic = new Audio(musicFilePath);
@@ -65,7 +88,7 @@ export function changeMenuMusic(
     }
 
     function playAndLoopMenuMusic(wasFromIntro: boolean = false) {
-      newMenuMusic.play();
+      newMenuMusic.play().catch(reportPlayError);
       newMenuMusic.loop = true;
       // If someone has changed the volume before the intro ended, this would overwrite it with the original as this function does not have up to date data
       if (!wasFromIntro) {
@@ -82,8 +105,14 @@ export function changeMenuMusic(
       };
       // @ts-ignore
       window.AUDIOLOADER_MENUMUSIC = {
-        play: menuMusic.play.bind(menuMusic),
-        pause: menuMusic.pause.bind(menuMusic),
+        play: () => {
+          menuMusicControl.pausedByOtherPlugin = false;
+          return menuMusic.play();
+        },
+        pause: () => {
+          menuMusicControl.pausedByOtherPlugin = true;
+          menuMusic.pause();
+        },
         origVolume: menuMusic.volume,
         // @ts-ignore
         setVolume: setVolume.bind(this),

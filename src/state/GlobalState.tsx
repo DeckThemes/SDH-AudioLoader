@@ -50,6 +50,11 @@ interface PublicGlobalState {
   activeSound: string;
   soundPacks: Pack[];
   selectedMusic: string;
+  dailyRandomMusic: boolean;
+  dailyMusicDate: string;
+  dailyMusicPick: string;
+  replayRandomMusic: boolean;
+  replaySong: boolean;
   isInstalling: boolean;
 }
 
@@ -147,6 +152,11 @@ export class GlobalState {
   private activeSound: string = "Default";
   private soundPacks: Pack[] = [];
   private selectedMusic: string = "None";
+  private dailyRandomMusic: boolean = false;
+  private dailyMusicDate: string = "";
+  private dailyMusicPick: string = "";
+  private replayRandomMusic: boolean = false;
+  private replaySong: boolean = false;
   private browserPackList: packDbEntry[] = [];
   private searchFieldValue: string = "";
   private selectedSort: number = 3;
@@ -181,6 +191,11 @@ export class GlobalState {
       activeSound: this.activeSound,
       soundPacks: this.soundPacks,
       selectedMusic: this.selectedMusic,
+      dailyRandomMusic: this.dailyRandomMusic,
+      dailyMusicDate: this.dailyMusicDate,
+      dailyMusicPick: this.dailyMusicPick,
+      replayRandomMusic: this.replayRandomMusic,
+      replaySong: this.replaySong,
       browserPackList: this.browserPackList,
       searchFieldValue: this.searchFieldValue,
       selectedSort: this.selectedSort,

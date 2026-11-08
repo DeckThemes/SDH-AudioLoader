@@ -1,10 +1,10 @@
 {
-  "name": "Audio Loader",
-  "author": "EMERALD0874 & Beebles",
+  "name": "Audio Loader Encore",
+  "author": "EMERALD0874 & Beebles (original), jwvdqx (Encore changes)",
   "flags": ["_root"],
   "publish": {
     "tags": ["style", "media", "music"],
-    "description": "Replaces Steam UI sound effects with custom sounds and adds music to menus.",
+    "description": "Unofficial fork of Audio Loader. Replaces Steam UI sound effects with custom sounds and adds music to menus, with new music every day, new music or songs every replay, and a fix for the music not coming back after sleep.",
     "image": "https://i.imgur.com/0Xuc1pr.png"
   }
 }

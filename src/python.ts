@@ -28,6 +28,17 @@ export function toast(title: string, message: string) {
   })();
 }
 
+// Writes a line to the Decky log (in the Audio Loader log folder) and to the browser console,
+// to help find problems. Logging must never break the plugin.
+export function logEvent(message: string): void {
+  console.log("Audio Loader -", message);
+  try {
+    server?.callPluginMethod("log_message", { message: message }).catch(() => {});
+  } catch {
+    // ignore
+  }
+}
+
 export function resolve(promise: Promise<any>, setter: any) {
   (async function () {
     let data = await promise;
