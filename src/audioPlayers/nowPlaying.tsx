@@ -7,6 +7,8 @@ export const nowPlayingSettings = { enabled: false };
 const MAX_CREDITS = 60;
 // The same pack is not announced again within this time (restarts after sleep can retry a few times)
 const REPEAT_MS = 20000;
+// Whatever the pack, never show two messages closer together than this
+const MIN_GAP_MS = 3000;
 
 let lastPack = "";
 let lastAt = 0;
@@ -56,6 +58,7 @@ function titleFor(text: string): { title: any; durationMs: number } {
 export function announceMusic(pack: Pack | undefined) {
   if (!nowPlayingSettings.enabled || !pack) return;
   const now = Date.now();
+  if (now - lastAt < MIN_GAP_MS) return;
   if (pack.name === lastPack && now - lastAt < REPEAT_MS) return;
   lastPack = pack.name;
   lastAt = now;

@@ -18,6 +18,10 @@ const MAX_GAIN = 4;
 const MAX_EFFECT_FILES = 16;
 // File lists are asked for again after this long (a pack may have been updated)
 const LIST_MAX_AGE_MS = 5 * 60 * 1000;
+// Files bigger than this are not measured (decoding them needs a lot of memory)
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
+// Measuring does not need full quality. Decoding at this sample rate uses much less memory.
+const MEASURE_RATE = 16000;
 
 type Entry = { rms: number; peak: number; size: number };
 
@@ -42,13 +46,28 @@ function saveSoon() {
 
 // ---- measuring ----
 
-async function measure(url: string): Promise<{ rms: number; peak: number } | null> {
+// Only one file is decoded at a time
+let measureQueue: Promise<unknown> = Promise.resolve();
+
+function measure(url: string): Promise<{ rms: number; peak: number } | null> {
+  const job = measureQueue.then(() => measureNow(url));
+  measureQueue = job.catch(() => null);
+  return job;
+}
+
+const TOO_BIG = { rms: 0, peak: 0 };
+
+async function measureNow(url: string): Promise<{ rms: number; peak: number } | null> {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
     const data = await response.arrayBuffer();
+    if (data.byteLength > MAX_FILE_BYTES) {
+      python.logEvent(`Normalize Volume: ${url} is too big to measure, left as it is`);
+      return TOO_BIG;
+    }
     // An offline context only decodes, it never touches the real sound output
-    const context = new OfflineAudioContext(1, 1, 44100);
+    const context = new OfflineAudioContext(1, 1, MEASURE_RATE);
     const audio = await context.decodeAudioData(data);
     let sum = 0;
     let count = 0;

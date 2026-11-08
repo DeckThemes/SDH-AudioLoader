@@ -612,6 +612,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     SteamClient.GameSessions.RegisterForAppLifetimeNotifications((update: AppState) => {
       const { menuMusic, selectedMusic, gamesRunning } = state.getPublicState();
       const setGlobalState = state.setGlobalState.bind(state);
+      menuMusicControl.lastGameEventAt = Date.now();
       if (selectedMusic !== "None") {
         if (update.bRunning) {
           // Because gamesRunning is in globalState, array methods like push and splice don't work

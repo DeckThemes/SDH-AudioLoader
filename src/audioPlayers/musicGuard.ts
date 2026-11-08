@@ -305,12 +305,16 @@ export function startMusicGuard(state: GlobalState): () => void {
   const timer = setInterval(() => {
     const wall = Date.now();
     const mono = performance.now();
+    const previousWall = lastWall;
     const wallGap = wall - lastWall;
     const monoGap = mono - lastMono;
     lastWall = wall;
     lastMono = mono;
 
-    if (wallGap - monoGap > SLEEP_EXTRA_MS || wallGap > BIG_GAP_MS) {
+    // Timers are also slowed down while a game runs. A long gap that overlaps a game starting or
+    // stopping is not a sleep, and treating it as one made the music restart again and again.
+    const gameInGap = menuMusicControl.lastGameEventAt >= previousWall - TICK_MS;
+    if (wallGap - monoGap > SLEEP_EXTRA_MS || (wallGap > BIG_GAP_MS && !gameInGap)) {
       resetWatch();
       trigger("wake");
       return;
