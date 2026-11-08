@@ -20,6 +20,7 @@ starter_config_data = {
   "random_music_every_replay": False,
   "wait_for_startup_movie": False,
   "normalize_volume": False,
+  "show_now_playing": False,
   "loudness_cache": {}
 }
 starter_config_string = json.dumps(starter_config_data)
@@ -273,6 +274,7 @@ class Plugin:
             "random_music_every_replay": False,
             "wait_for_startup_movie": False,
             "normalize_volume": False,
+            "show_now_playing": False,
             "loudness_cache": {}
         }
 

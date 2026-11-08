@@ -25,6 +25,7 @@ import {
   ensureEffectGain,
   getTodayKey,
   loadLoudnessCache,
+  nowPlayingSettings,
   loudnessSettings,
   normalizeRunningMusic,
   refreshEffectVolume,
@@ -62,6 +63,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     replayRandomMusic,
     waitForMovie,
     normalizeVolume,
+    showNowPlaying,
     soundVolume,
     musicVolume,
     dummyFuncResult,
@@ -291,6 +293,18 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             </PanelSectionRow>
             <PanelSectionRow>
               <ToggleField
+                label="Show Now Playing"
+                description="Shows a small message with the music pack's name and its credits whenever new music starts."
+                checked={showNowPlaying}
+                onChange={(value: boolean) => {
+                  nowPlayingSettings.enabled = value;
+                  setGlobalState("showNowPlaying", value);
+                  python.setConfig({ show_now_playing: value });
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ToggleField
                 label="Wait for Startup Movie"
                 description="When the Deck starts or wakes up, the music waits until the startup or wake-up movie has finished before it begins."
                 checked={waitForMovie}
@@ -514,6 +528,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configReplay = data?.random_music_every_replay ?? false;
       const configWaitMovie = data?.wait_for_startup_movie ?? false;
       const configNormalize = data?.normalize_volume ?? false;
+      const configNowPlaying = data?.show_now_playing ?? false;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
       setGlobalState("selectedMusic", configSelectedMusic);
@@ -526,6 +541,8 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("replayRandomMusic", configReplay);
       setGlobalState("waitForMovie", configWaitMovie);
       setGlobalState("normalizeVolume", configNormalize);
+      setGlobalState("showNowPlaying", configNowPlaying);
+      nowPlayingSettings.enabled = configNowPlaying;
       loadLoudnessCache(data?.loudness_cache);
       loudnessSettings.enabled = configNormalize;
       // Starts measuring the active sound pack when "Normalize Volume" is on
