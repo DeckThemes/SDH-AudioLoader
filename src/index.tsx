@@ -22,8 +22,10 @@ import {
   changeMenuMusic,
   getTodayKey,
   pickReplayMusic,
+  menuMusicControl,
   pickTodaysMusic,
   playRandomMusic,
+  waitForMovies,
   startMusicGuard,
 } from "./audioPlayers";
 import { AudioParent } from "./gamepadAudioFinder";
@@ -50,6 +52,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     dailyMusicDate,
     dailyMusicPick,
     replayRandomMusic,
+    waitForMovie,
     soundVolume,
     musicVolume,
     gainNode,
@@ -260,6 +263,17 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               />
             </PanelSectionRow>
             <PanelSectionRow>
+              <ToggleField
+                label="Wait for Startup Movie"
+                description="When the Deck starts or wakes up, the music waits until the startup or wake-up movie has finished before it begins."
+                checked={waitForMovie}
+                onChange={(value: boolean) => {
+                  setGlobalState("waitForMovie", value);
+                  python.setConfig({ wait_for_startup_movie: value });
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
               <SliderField
                 bottomSeparator="standard"
                 label={undefined}
@@ -455,6 +469,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configDailyDate = data?.daily_music_date ?? "";
       const configDailyPick = data?.daily_music_pick ?? "";
       const configReplay = data?.random_music_every_replay ?? false;
+      const configWaitMovie = data?.wait_for_startup_movie ?? false;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
       setGlobalState("selectedMusic", configSelectedMusic);
@@ -465,6 +480,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("dailyMusicDate", configDailyDate);
       setGlobalState("dailyMusicPick", configDailyPick);
       setGlobalState("replayRandomMusic", configReplay);
+      setGlobalState("waitForMovie", configWaitMovie);
 
       const { soundPacks } = state.getPublicState();
 
@@ -496,15 +512,31 @@ export default definePlugin((serverApi: ServerAPI) => {
       }
 
       // Plays menu music initially only if legacy settings are enabled
-      if (configLegacyEnabled)
-        changeMenuMusic(
-          musicToPlay,
-          null,
-          setGlobalState,
-          [],
-          soundPacks,
-          configMusicVolume
-        );
+      if (configLegacyEnabled) {
+        const startMusic = () =>
+          changeMenuMusic(
+            musicToPlay,
+            null,
+            setGlobalState,
+            [],
+            soundPacks,
+            configMusicVolume
+          );
+        if (configWaitMovie && musicToPlay !== "None") {
+          // "Wait for Startup Movie": start when the movie is over, unless something else
+          // (like the user picking music) has started the music in the meantime
+          menuMusicControl.waitingForMovie = true;
+          waitForMovies()
+            .catch(() => {})
+            .then(() => {
+              menuMusicControl.waitingForMovie = false;
+              const now = state.getPublicState();
+              if (now.legacyEnabled && now.menuMusic === null) startMusic();
+            });
+        } else {
+          startMusic();
+        }
+      }
     });
   });
 

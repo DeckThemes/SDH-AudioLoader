@@ -2,6 +2,7 @@ import { GlobalState } from "../state/GlobalState";
 import * as python from "../python";
 import { changeMenuMusic, menuMusicControl } from "./changeMenuMusic";
 import { pickReplayMusic, pickTodaysMusic } from "./dailyMusic";
+import { waitForMovies } from "./movieWait";
 
 // Shown in the first on-screen message and in the settings, to tell which build is installed
 export const BUILD_TAG = "v1.0.1";
@@ -116,6 +117,15 @@ export async function restoreMusic(state: GlobalState, reason: Reason): Promise<
       say(`Woke from sleep (${BUILD_TAG}). Restarting the music in a few seconds...`);
       // The sound system needs a moment after waking, a restart right away can end up silent
       await wait(WAKE_DELAY_MS);
+      // "Wait for Startup Movie": let the wake-up movie finish before the music comes back
+      if (state.getPublicState().waitForMovie) {
+        menuMusicControl.waitingForMovie = true;
+        try {
+          await waitForMovies();
+        } finally {
+          menuMusicControl.waitingForMovie = false;
+        }
+      }
     } else {
       say(`The music was not playing (${BUILD_TAG}). Restarting it...`);
     }
@@ -262,7 +272,8 @@ export function startMusicGuard(state: GlobalState): () => void {
       s.legacyEnabled &&
       s.selectedMusic !== "None" &&
       s.gamesRunning.length === 0 &&
-      !menuMusicControl.pausedByOtherPlugin;
+      !menuMusicControl.pausedByOtherPlugin &&
+      !menuMusicControl.waitingForMovie;
     if (busy || !shouldPlay) {
       resetWatch();
       return;

@@ -4,7 +4,7 @@ import * as python from "../python";
 // Other plugins can pause the music through window.AUDIOLOADER_MENUMUSIC. The music guard must
 // not fight them, so a pause made that way is remembered here until play() is called again or
 // new music is started.
-export const menuMusicControl = { pausedByOtherPlugin: false };
+export const menuMusicControl = { pausedByOtherPlugin: false, waitingForMovie: false };
 
 // A refused play() would otherwise disappear silently, so write it to the log
 function reportPlayError(error: any) {

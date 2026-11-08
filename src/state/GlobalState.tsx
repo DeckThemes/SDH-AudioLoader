@@ -54,6 +54,7 @@ interface PublicGlobalState {
   dailyMusicDate: string;
   dailyMusicPick: string;
   replayRandomMusic: boolean;
+  waitForMovie: boolean;
   isInstalling: boolean;
 }
 
@@ -155,6 +156,7 @@ export class GlobalState {
   private dailyMusicDate: string = "";
   private dailyMusicPick: string = "";
   private replayRandomMusic: boolean = false;
+  private waitForMovie: boolean = false;
   private browserPackList: packDbEntry[] = [];
   private searchFieldValue: string = "";
   private selectedSort: number = 3;
@@ -193,6 +195,7 @@ export class GlobalState {
       dailyMusicDate: this.dailyMusicDate,
       dailyMusicPick: this.dailyMusicPick,
       replayRandomMusic: this.replayRandomMusic,
+      waitForMovie: this.waitForMovie,
       browserPackList: this.browserPackList,
       searchFieldValue: this.searchFieldValue,
       selectedSort: this.selectedSort,
