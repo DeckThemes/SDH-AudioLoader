@@ -1,7 +1,7 @@
 {
-  "name": "SDH-AudioLoader",
-  "version": "1.2.0",
-  "description": "Replaces and adds Steam Deck game UI sounds",
+  "name": "sdh-audioloader-encore",
+  "version": "1.2.1",
+  "description": "Unofficial Encore fork of Audio Loader for Steam Deck UI sounds and menu music",
   "scripts": {
     "build": "shx rm -rf dist && rollup -c",
     "watch": "rollup -c -w",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EMERALD0874/SDH-AudioLoader.git"
+    "url": "git+https://github.com/jwvdqx/SDH-AudioLoader-Encore.git"
   },
   "keywords": [
     "decky",
@@ -17,12 +17,12 @@
     "steam-deck",
     "deck"
   ],
-  "author": "EMERALD0874",
+  "author": "EMERALD0874 & Beebles (original), jwvdqx (Encore changes)",
   "license": "GPL-2.0-or-later",
   "bugs": {
-    "url": "https://github.com/EMERALD0874/SDH-AudioLoader/issues"
+    "url": "https://github.com/jwvdqx/SDH-AudioLoader-Encore/issues"
   },
-  "homepage": "https://github.com/EMERALD0874/SDH-AudioLoader#readme",
+  "homepage": "https://github.com/jwvdqx/SDH-AudioLoader-Encore#readme",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^21.1.0",
     "@rollup/plugin-json": "^4.1.0",
