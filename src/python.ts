@@ -13,15 +13,16 @@ export function setStateClass(s: GlobalState): void {
   globalState = s;
 }
 
-export function toast(title: string, message: string) {
+// The title and message can also be React elements (the "Now Playing" title scrolls this way)
+export function toast(title: any, message: any, duration: number = 8000) {
   // This is a weirdo self-invoking function, but it works.
   return (() => {
     try {
       return server?.toaster.toast({
         title: title,
         body: message,
-        duration: 8000,
-      });
+        duration: duration,
+      } as any);
     } catch (e) {
       console.log("CSSLoader Toaster Error", e);
     }
