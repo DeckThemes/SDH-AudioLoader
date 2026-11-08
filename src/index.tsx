@@ -39,6 +39,7 @@ import {
   waitForMovies,
   startMusicGuard,
   configureMusicLowPass,
+  previewMusicLowPass,
   startMusicLowPassContextMonitor,
   stopMusicLowPassAudio,
 } from "./audioPlayers";
@@ -70,9 +71,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     waitForMovie,
     normalizeVolume,
     showNowPlaying,
-    lowPassEnabled,
-    lowPassSteamMenus,
-    lowPassGameLaunching,
+    lowPassSteamMenu,
+    lowPassQuickAccess,
+    lowPassGameLoading,
     lowPassStrength,
     soundVolume,
     musicVolume,
@@ -368,52 +369,52 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         <PanelSection title="Music Low-Pass Filter">
           <PanelSectionRow>
             <ToggleField
-              label="Enable Context-Aware Low-Pass Filter"
-              description="Applies a gradual low-pass filter to Encore's menu music only. Steam UI sounds and game audio are not changed."
-              checked={lowPassEnabled}
+              label="Steam Menu"
+              description="Muffles the music while the Steam menu (Steam button) is open."
+              checked={lowPassSteamMenu}
               onChange={(value: boolean) => {
-                setGlobalState("lowPassEnabled", value);
+                setGlobalState("lowPassSteamMenu", value);
                 configureMusicLowPass({
-                  enabled: value,
-                  steamMenus: lowPassSteamMenus,
-                  gameLaunching: lowPassGameLaunching,
+                  steamMenu: value,
+                  quickAccess: lowPassQuickAccess,
+                  gameLoading: lowPassGameLoading,
                   strength: lowPassStrength,
-                }, true);
-                python.setConfig({ low_pass_enabled: value });
+                });
+                python.setConfig({ low_pass_steam_menu: value });
               }}
             />
           </PanelSectionRow>
           <PanelSectionRow>
             <ToggleField
-              label="Steam Foreground Menus / Overlay"
-              description="Filters music while a Steam foreground popup takes focus, such as Quick Access or the Steam menu. Steam does not expose a stable public event for distinguishing every popup type."
-              checked={lowPassSteamMenus}
+              label="Quick Access Menu (...)"
+              description="Muffles the music while the Quick Access (...) menu is open."
+              checked={lowPassQuickAccess}
               onChange={(value: boolean) => {
-                setGlobalState("lowPassSteamMenus", value);
+                setGlobalState("lowPassQuickAccess", value);
                 configureMusicLowPass({
-                  enabled: lowPassEnabled,
-                  steamMenus: value,
-                  gameLaunching: lowPassGameLaunching,
+                  steamMenu: lowPassSteamMenu,
+                  quickAccess: value,
+                  gameLoading: lowPassGameLoading,
                   strength: lowPassStrength,
-                }, true);
-                python.setConfig({ low_pass_steam_menus: value });
+                });
+                python.setConfig({ low_pass_quick_access: value });
               }}
             />
           </PanelSectionRow>
           <PanelSectionRow>
             <ToggleField
-              label="Game Launch / Loading"
-              description="Filters music from the moment Steam starts the game-launch action until the game process starts or Steam ends the launch action."
-              checked={lowPassGameLaunching}
+              label="Game Loading"
+              description="Muffles the music from the moment you press play on a game until the game has started."
+              checked={lowPassGameLoading}
               onChange={(value: boolean) => {
-                setGlobalState("lowPassGameLaunching", value);
+                setGlobalState("lowPassGameLoading", value);
                 configureMusicLowPass({
-                  enabled: lowPassEnabled,
-                  steamMenus: lowPassSteamMenus,
-                  gameLaunching: value,
+                  steamMenu: lowPassSteamMenu,
+                  quickAccess: lowPassQuickAccess,
+                  gameLoading: value,
                   strength: lowPassStrength,
-                }, true);
-                python.setConfig({ low_pass_game_launching: value });
+                });
+                python.setConfig({ low_pass_game_loading: value });
               }}
             />
           </PanelSectionRow>
@@ -421,6 +422,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             <SliderField
               bottomSeparator="standard"
               label={`Filter Strength (${lowPassStrength}%)`}
+              description="Higher is more muffled. You hear the filter for a moment when you move this."
               value={lowPassStrength}
               min={0}
               max={100}
@@ -428,11 +430,12 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               onChange={(value) => {
                 setGlobalState("lowPassStrength", value);
                 configureMusicLowPass({
-                  enabled: lowPassEnabled,
-                  steamMenus: lowPassSteamMenus,
-                  gameLaunching: lowPassGameLaunching,
+                  steamMenu: lowPassSteamMenu,
+                  quickAccess: lowPassQuickAccess,
+                  gameLoading: lowPassGameLoading,
                   strength: value,
-                }, true);
+                });
+                previewMusicLowPass();
                 python.setConfig({ low_pass_strength: value });
               }}
               icon={<FaMusic />}
@@ -628,9 +631,11 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configWaitMovie = data?.wait_for_startup_movie ?? false;
       const configNormalize = data?.normalize_volume ?? false;
       const configNowPlaying = data?.show_now_playing ?? false;
-      const configLowPassEnabled = data?.low_pass_enabled ?? false;
-      const configLowPassSteamMenus = data?.low_pass_steam_menus ?? false;
-      const configLowPassGameLaunching = data?.low_pass_game_launching ?? false;
+      // Older builds (1.2.6) had a master switch and one menu toggle: keep what the user had chosen
+      const oldLowPass = data?.low_pass_enabled === true;
+      const configLowPassSteamMenu = data?.low_pass_steam_menu ?? (oldLowPass && data?.low_pass_steam_menus === true);
+      const configLowPassQuickAccess = data?.low_pass_quick_access ?? (oldLowPass && data?.low_pass_steam_menus === true);
+      const configLowPassGameLoading = data?.low_pass_game_loading ?? (oldLowPass && data?.low_pass_game_launching === true);
       const configLowPassStrength = data?.low_pass_strength ?? 50;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
@@ -647,14 +652,14 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("waitForMovie", configWaitMovie);
       setGlobalState("normalizeVolume", configNormalize);
       setGlobalState("showNowPlaying", configNowPlaying);
-      setGlobalState("lowPassEnabled", configLowPassEnabled);
-      setGlobalState("lowPassSteamMenus", configLowPassSteamMenus);
-      setGlobalState("lowPassGameLaunching", configLowPassGameLaunching);
+      setGlobalState("lowPassSteamMenu", configLowPassSteamMenu);
+      setGlobalState("lowPassQuickAccess", configLowPassQuickAccess);
+      setGlobalState("lowPassGameLoading", configLowPassGameLoading);
       setGlobalState("lowPassStrength", configLowPassStrength);
       configureMusicLowPass({
-        enabled: configLowPassEnabled,
-        steamMenus: configLowPassSteamMenus,
-        gameLaunching: configLowPassGameLaunching,
+        steamMenu: configLowPassSteamMenu,
+        quickAccess: configLowPassQuickAccess,
+        gameLoading: configLowPassGameLoading,
         strength: configLowPassStrength,
       });
       nowPlayingSettings.enabled = configNowPlaying;

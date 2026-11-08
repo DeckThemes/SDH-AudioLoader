@@ -58,9 +58,9 @@ interface PublicGlobalState {
   waitForMovie: boolean;
   normalizeVolume: boolean;
   showNowPlaying: boolean;
-  lowPassEnabled: boolean;
-  lowPassSteamMenus: boolean;
-  lowPassGameLaunching: boolean;
+  lowPassSteamMenu: boolean;
+  lowPassQuickAccess: boolean;
+  lowPassGameLoading: boolean;
   lowPassStrength: number;
   isInstalling: boolean;
 }
@@ -167,9 +167,9 @@ export class GlobalState {
   private waitForMovie: boolean = false;
   private normalizeVolume: boolean = false;
   private showNowPlaying: boolean = false;
-  private lowPassEnabled: boolean = false;
-  private lowPassSteamMenus: boolean = false;
-  private lowPassGameLaunching: boolean = false;
+  private lowPassSteamMenu: boolean = false;
+  private lowPassQuickAccess: boolean = false;
+  private lowPassGameLoading: boolean = false;
   private lowPassStrength: number = 50;
   private browserPackList: packDbEntry[] = [];
   private searchFieldValue: string = "";
@@ -213,9 +213,9 @@ export class GlobalState {
       waitForMovie: this.waitForMovie,
       normalizeVolume: this.normalizeVolume,
       showNowPlaying: this.showNowPlaying,
-      lowPassEnabled: this.lowPassEnabled,
-      lowPassSteamMenus: this.lowPassSteamMenus,
-      lowPassGameLaunching: this.lowPassGameLaunching,
+      lowPassSteamMenu: this.lowPassSteamMenu,
+      lowPassQuickAccess: this.lowPassQuickAccess,
+      lowPassGameLoading: this.lowPassGameLoading,
       lowPassStrength: this.lowPassStrength,
       browserPackList: this.browserPackList,
       searchFieldValue: this.searchFieldValue,

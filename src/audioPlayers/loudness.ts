@@ -11,9 +11,12 @@ export const loudnessSettings = { enabled: false };
 // Target levels (RMS, in dBFS). Quiet packs are boosted towards them, loud packs are turned down.
 const REF_MUSIC_DB = -18;
 const REF_EFFECT_DB = -26;
-// Never change a volume by more than this (about -12 dB .. +12 dB)
-const MIN_GAIN = 0.25;
-const MAX_GAIN = 4;
+// Never change a volume by more than this (about -18 dB .. +18 dB)
+const MIN_GAIN = 0.125;
+const MAX_GAIN = 8;
+// A boost may let the loudest moment go this far over the maximum (1.3 is about +2 dB).
+// Short peaks like that are not noticeable, and it lets quiet but "peaky" music be boosted.
+const PEAK_ALLOWANCE = 1.3;
 // A pack can have many sound effects. Measuring this many of them is enough.
 const MAX_EFFECT_FILES = 16;
 // File lists are asked for again after this long (a pack may have been updated)
@@ -94,7 +97,7 @@ export function gainFor(rms: number, peak: number, refDb: number): number {
   if (!(rms > 0)) return 1;
   const wanted = Math.pow(10, (refDb - 20 * Math.log10(rms)) / 20);
   // Boosting must not push the loudest moment over the maximum
-  const limit = peak > 0 ? Math.max(1 / peak, 1) : MAX_GAIN;
+  const limit = peak > 0 ? Math.max(PEAK_ALLOWANCE / peak, 1) : MAX_GAIN;
   return Math.max(MIN_GAIN, Math.min(MAX_GAIN, wanted, limit));
 }
 
