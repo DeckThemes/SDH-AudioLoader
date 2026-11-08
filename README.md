@@ -13,13 +13,17 @@ The two toggles can be used together. With "New Music Every Day" and "New Music 
 ## Honest status
 Tested on one Steam Deck, mainly the daily toggle and the sleep/wake fix. The two replay toggles were checked with simulated players only. They may have bugs. If something does not work, please open an issue and say which toggles you had on.
 
-## Installation
-Encore is not in the Decky plugin store.
+## Installation (from Decky Loader, no computer needed)
+Encore is not in the Decky plugin store, but Decky can install it straight from a link:
 
 1. Install [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader).
-2. **Remove the original Audio Loader first** (the two would fight over the same sounds). Your settings and sound packs stay where they are.
-3. Download the latest zip from the [Releases page](../../releases) (or, from the **Actions** tab, the artifact of the newest successful run), and unzip it. You get a folder called `Audio Loader Encore`.
-4. Switch to Desktop Mode and copy that folder into `/home/deck/homebrew/plugins/` (this folder needs admin rights), then restart the Deck.
+2. **Uninstall the original Audio Loader first** (in Decky's plugin list), because the two would fight over the same sounds. Your sound packs and settings stay where they are.
+3. Open the Decky menu, go to **Settings** (the gear), then **General**, and turn on **Developer Mode**.
+4. Open the new **Developer** page and choose **Install Plugin from URL**.
+5. Paste this link and install: `https://github.com/jwvdqx/SDH-AudioLoader-Encore/releases/download/v1.0.0/Audio-Loader-Encore-v1.0.0.zip`
+6. Decky may ask you to confirm. Accept. If the plugin does not show up, restart Decky Loader or the Deck.
+
+You can also download the zip from the [Releases page](../../releases) and copy the `Audio Loader Encore` folder into `/home/deck/homebrew/plugins/` yourself.
 
 ## Building it yourself
 `pnpm install` and then `pnpm build` create `dist/index.js`. The GitHub Action in `.github/workflows/build.yml` does this automatically and collects the files the Deck needs.
