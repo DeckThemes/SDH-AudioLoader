@@ -44,9 +44,8 @@ function say(message: string) {
   if (SHOW_DEBUG_TOASTS) python.toast("Audio Loader", message);
 }
 
-// "New Music Every Replay" / "New Song Every Replay": starts the music over right now, either
-// with a different music pack, or with a different song of the same pack.
-// Returns true if the music was started.
+// "New Music Every Replay": switches to a different random music pack right now.
+// Returns true if new music was started.
 export function playRandomMusic(state: GlobalState): boolean {
   const s = state.getPublicState();
   if (
@@ -57,9 +56,8 @@ export function playRandomMusic(state: GlobalState): boolean {
   ) {
     return false;
   }
-  let pick: string | null = s.selectedMusic;
-  if (s.replayRandomMusic) pick = pickReplayMusic(s.soundPacks, s.selectedMusic);
-  else if (!s.replaySong) return false;
+  if (!s.replayRandomMusic) return false;
+  const pick = pickReplayMusic(s.soundPacks, s.selectedMusic);
   if (!pick) return false;
   python.logEvent(`New music for the replay: ${pick}`);
   changeMenuMusic(
@@ -80,8 +78,7 @@ const loopTurnedOff = new WeakSet<object>();
 // the moment it ends the next music starts. That way no piece of the old music is heard again.
 function watchForReplay(state: GlobalState, el: any) {
   if (!el) return;
-  const wanted = (s: ReturnType<GlobalState["getPublicState"]>) =>
-    s.replayRandomMusic || s.replaySong;
+  const wanted = (s: ReturnType<GlobalState["getPublicState"]>) => s.replayRandomMusic;
   if (wanted(state.getPublicState())) {
     if (el.loop) {
       el.loop = false;

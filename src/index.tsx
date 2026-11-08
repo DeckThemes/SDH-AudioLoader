@@ -50,7 +50,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     dailyMusicDate,
     dailyMusicPick,
     replayRandomMusic,
-    replaySong,
     soundVolume,
     musicVolume,
     gainNode,
@@ -261,17 +260,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               />
             </PanelSectionRow>
             <PanelSectionRow>
-              <ToggleField
-                label="New Song Every Replay"
-                description="Every time the music starts again, it plays a different song from the same music pack (for packs that have more than one song). Can be used together with the other two."
-                checked={replaySong}
-                onChange={(value: boolean) => {
-                  setGlobalState("replaySong", value);
-                  python.setConfig({ new_song_every_replay: value });
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
               <SliderField
                 bottomSeparator="standard"
                 label={undefined}
@@ -467,7 +455,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configDailyDate = data?.daily_music_date ?? "";
       const configDailyPick = data?.daily_music_pick ?? "";
       const configReplay = data?.random_music_every_replay ?? false;
-      const configReplaySong = data?.new_song_every_replay ?? false;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
       setGlobalState("selectedMusic", configSelectedMusic);
@@ -478,7 +465,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("dailyMusicDate", configDailyDate);
       setGlobalState("dailyMusicPick", configDailyPick);
       setGlobalState("replayRandomMusic", configReplay);
-      setGlobalState("replaySong", configReplaySong);
 
       const { soundPacks } = state.getPublicState();
 

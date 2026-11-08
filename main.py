@@ -17,8 +17,7 @@ starter_config_data = {
   "daily_random_music": False,
   "daily_music_date": "",
   "daily_music_pick": "",
-  "random_music_every_replay": False,
-  "new_song_every_replay": False
+  "random_music_every_replay": False
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -250,8 +249,7 @@ class Plugin:
             "daily_random_music": False,
             "daily_music_date": "",
             "daily_music_pick": "",
-            "random_music_every_replay": False,
-            "new_song_every_replay": False
+            "random_music_every_replay": False
         }
 
         Log("Initializing Audio Loader...")

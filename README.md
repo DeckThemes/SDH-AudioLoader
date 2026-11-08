@@ -6,10 +6,9 @@ Encore adds new options to the "legacy" menu music of Audio Loader (turn on **En
 
 - **New Music Every Day**: picks a different music pack each day. Choosing "None" keeps the music off until the next day.
 - **New Music Every Replay**: every time the music starts again (when it ends, after a game closes, or after the Deck wakes up), it switches to a different music pack.
-- **New Song Every Replay**: every replay plays a different song from the same pack (for packs that contain several songs).
 - **Music after sleep**: the menu music did not come back after the Deck woke from sleep. Encore notices the wake-up and starts the music again. It also restarts the music if it should be playing but has gone silent, and it leaves it alone while a game is running or when another plugin paused it on purpose.
 
-The three toggles can be used together. With "New Music Every Day" and "New Music Every Replay" both on, the first music of a new day is the daily pick, and later replays rotate to other packs.
+The two toggles can be used together. With "New Music Every Day" and "New Music Every Replay" both on, the first music of a new day is the daily pick, and later replays rotate to other packs.
 
 ## Honest status
 Tested on one Steam Deck, mainly the daily toggle and the sleep/wake fix. The two replay toggles were checked with simulated players only. They may have bugs. If something does not work, please open an issue and say which toggles you had on.
