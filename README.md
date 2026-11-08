@@ -10,9 +10,12 @@ Encore adds new options to the "legacy" menu music of Audio Loader (turn on **En
 - **Show Now Playing**: a small message with the music pack's name and its credits (the pack's author, shortened with "..." if long) whenever new music starts. A long pack name scrolls so it can be read completely.
 - **Wait for Startup Movie**: the music waits until the Deck's startup movie (or wake-up movie) has finished before it begins. It looks for a video playing with sound; if it finds none within a couple of seconds, the music starts normally.
 - **Normalize Volume**: makes every sound pack and music pack about equally loud, so the two volume sliders mean the same thing for all packs. Each pack is measured the first time it is used (a few seconds; the result is saved). Quiet packs are boosted and loud ones turned down, by at most about 12 dB. Steam's own default sounds are not changed.
+- **Context-aware Music Low-Pass Filter**: applies a smooth low-pass filter to Encore-managed menu music during Steam foreground popups (such as Quick Access / the Steam menu) and/or while a game is launching. The menu and launch contexts have separate toggles, and a 0-100% strength slider maps from near-transparent filtering (20 kHz) down to a strong 500 Hz cutoff. Steam UI sound effects and game audio are not processed.
 - **Music after sleep**: the menu music did not come back after the Deck woke from sleep. Encore notices the wake-up and starts the music again. It also restarts the music if it should be playing but has gone silent, and it leaves it alone while a game is running or when another plugin paused it on purpose.
 
 The toggles can be used together. With "New Music Every Day" and "New Music Every Replay" both on, the first music of a new day is the daily pick, and later replays rotate to other packs.
+
+The low-pass filter uses the Steam Game Mode window's focus changes as the reliable available signal for foreground menu popups. Steam does not currently expose a stable public event that distinguishes every individual popup or selection dialog. The launch context uses Steam's game-action start/end notifications and is cleared when the game process starts.
 
 ## Honest status
 Tested on one Steam Deck, mainly the daily toggle and the sleep/wake fix. The two replay toggles were checked with simulated players only. They may have bugs. If something does not work, please open an issue and say which toggles you had on.

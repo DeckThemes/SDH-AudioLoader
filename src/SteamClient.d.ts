@@ -7,11 +7,13 @@ declare namespace SteamClient {
     GetAllShortcuts(): Promise<Shortcut[]>;
     RegisterForGameActionStart(
       callback: (
-        actionType: number,
-        strAppId: string,
-        actionName: string
+        gameActionId: number,
+        appId: string,
+        action: string,
+        launchSource?: any
       ) => any
     ): RegisteredEvent;
+    RegisterForGameActionEnd(callback: (gameActionId: number) => any): RegisteredEvent;
   };
   const InstallFolder: {
     GetInstallFolders(): Promise<InstallFolder[]>;

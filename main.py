@@ -22,6 +22,10 @@ starter_config_data = {
   "wait_for_startup_movie": False,
   "normalize_volume": False,
   "show_now_playing": False,
+  "low_pass_enabled": False,
+  "low_pass_steam_menus": False,
+  "low_pass_game_launching": False,
+  "low_pass_strength": 50,
   "loudness_cache": {},
   "recent_music": []
 }
@@ -278,6 +282,10 @@ class Plugin:
             "wait_for_startup_movie": False,
             "normalize_volume": False,
             "show_now_playing": False,
+            "low_pass_enabled": False,
+            "low_pass_steam_menus": False,
+            "low_pass_game_launching": False,
+            "low_pass_strength": 50,
             "loudness_cache": {},
             "recent_music": []
         }

@@ -3,6 +3,7 @@ import * as python from "../python";
 import { announceMusic } from "./nowPlaying";
 import { rememberMusic } from "./dailyMusic";
 import { applyMusicVolume, cachedMusicGain, loudnessSettings, normalizeMusic } from "./loudness";
+import { setMusicLowPassPlayer } from "./lowPass";
 
 // Other plugins can pause the music through window.AUDIOLOADER_MENUMUSIC. The music guard must
 // not fight them, so a pause made that way is remembered here until play() is called again or
@@ -142,6 +143,7 @@ export function changeMenuMusic(
         // @ts-ignore
         setVolume: setVolume.bind(this),
       };
+      setMusicLowPassPlayer(menuMusic);
       setGlobalState("menuMusic", menuMusic);
     }
   }

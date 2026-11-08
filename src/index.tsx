@@ -38,6 +38,9 @@ import {
   playRandomMusic,
   waitForMovies,
   startMusicGuard,
+  configureMusicLowPass,
+  startMusicLowPassContextMonitor,
+  stopMusicLowPassAudio,
 } from "./audioPlayers";
 import { AudioParent } from "./gamepadAudioFinder";
 import {
@@ -67,6 +70,10 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     waitForMovie,
     normalizeVolume,
     showNowPlaying,
+    lowPassEnabled,
+    lowPassSteamMenus,
+    lowPassGameLaunching,
+    lowPassStrength,
     soundVolume,
     musicVolume,
     dummyFuncResult,
@@ -357,6 +364,82 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           </>
         )}
       </PanelSection>
+      {legacyEnabled && (
+        <PanelSection title="Music Low-Pass Filter">
+          <PanelSectionRow>
+            <ToggleField
+              label="Enable Context-Aware Low-Pass Filter"
+              description="Applies a gradual low-pass filter to Encore's menu music only. Steam UI sounds and game audio are not changed."
+              checked={lowPassEnabled}
+              onChange={(value: boolean) => {
+                setGlobalState("lowPassEnabled", value);
+                configureMusicLowPass({
+                  enabled: value,
+                  steamMenus: lowPassSteamMenus,
+                  gameLaunching: lowPassGameLaunching,
+                  strength: lowPassStrength,
+                }, true);
+                python.setConfig({ low_pass_enabled: value });
+              }}
+            />
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <ToggleField
+              label="Steam Foreground Menus / Overlay"
+              description="Filters music while a Steam foreground popup takes focus, such as Quick Access or the Steam menu. Steam does not expose a stable public event for distinguishing every popup type."
+              checked={lowPassSteamMenus}
+              onChange={(value: boolean) => {
+                setGlobalState("lowPassSteamMenus", value);
+                configureMusicLowPass({
+                  enabled: lowPassEnabled,
+                  steamMenus: value,
+                  gameLaunching: lowPassGameLaunching,
+                  strength: lowPassStrength,
+                }, true);
+                python.setConfig({ low_pass_steam_menus: value });
+              }}
+            />
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <ToggleField
+              label="Game Launch / Loading"
+              description="Filters music from the moment Steam starts the game-launch action until the game process starts or Steam ends the launch action."
+              checked={lowPassGameLaunching}
+              onChange={(value: boolean) => {
+                setGlobalState("lowPassGameLaunching", value);
+                configureMusicLowPass({
+                  enabled: lowPassEnabled,
+                  steamMenus: lowPassSteamMenus,
+                  gameLaunching: value,
+                  strength: lowPassStrength,
+                }, true);
+                python.setConfig({ low_pass_game_launching: value });
+              }}
+            />
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <SliderField
+              bottomSeparator="standard"
+              label={`Filter Strength (${lowPassStrength}%)`}
+              value={lowPassStrength}
+              min={0}
+              max={100}
+              step={1}
+              onChange={(value) => {
+                setGlobalState("lowPassStrength", value);
+                configureMusicLowPass({
+                  enabled: lowPassEnabled,
+                  steamMenus: lowPassSteamMenus,
+                  gameLaunching: lowPassGameLaunching,
+                  strength: value,
+                }, true);
+                python.setConfig({ low_pass_strength: value });
+              }}
+              icon={<FaMusic />}
+            />
+          </PanelSectionRow>
+        </PanelSection>
+      )}
       <PanelSection title="Settings">
         <PanelSectionRow>
           <ButtonItem
@@ -545,6 +628,10 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configWaitMovie = data?.wait_for_startup_movie ?? false;
       const configNormalize = data?.normalize_volume ?? false;
       const configNowPlaying = data?.show_now_playing ?? false;
+      const configLowPassEnabled = data?.low_pass_enabled ?? false;
+      const configLowPassSteamMenus = data?.low_pass_steam_menus ?? false;
+      const configLowPassGameLaunching = data?.low_pass_game_launching ?? false;
+      const configLowPassStrength = data?.low_pass_strength ?? 50;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
       setGlobalState("selectedMusic", configSelectedMusic);
@@ -560,6 +647,16 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("waitForMovie", configWaitMovie);
       setGlobalState("normalizeVolume", configNormalize);
       setGlobalState("showNowPlaying", configNowPlaying);
+      setGlobalState("lowPassEnabled", configLowPassEnabled);
+      setGlobalState("lowPassSteamMenus", configLowPassSteamMenus);
+      setGlobalState("lowPassGameLaunching", configLowPassGameLaunching);
+      setGlobalState("lowPassStrength", configLowPassStrength);
+      configureMusicLowPass({
+        enabled: configLowPassEnabled,
+        steamMenus: configLowPassSteamMenus,
+        gameLaunching: configLowPassGameLaunching,
+        strength: configLowPassStrength,
+      });
       nowPlayingSettings.enabled = configNowPlaying;
       loadLoudnessCache(data?.loudness_cache);
       loadRecentMusic(data?.recent_music);
@@ -662,6 +759,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   // Keeps the music playing, and brings it back after the Deck wakes from sleep
   // (see audioPlayers/musicGuard.ts)
   const stopMusicGuard = startMusicGuard(state);
+  const stopLowPassContextMonitor = startMusicLowPassContextMonitor();
 
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
     <GlobalStateContextProvider globalStateClass={state}>
@@ -696,6 +794,8 @@ export default definePlugin((serverApi: ServerAPI) => {
       setEffectVolumeApplier(null);
       AppStateRegistrar.unregister();
       stopMusicGuard();
+      stopLowPassContextMonitor();
+      stopMusicLowPassAudio();
     },
   };
 });
