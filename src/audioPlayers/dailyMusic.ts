@@ -66,6 +66,9 @@ export function pickTodaysMusic(
 // ---- Variety: avoid hearing the same music (or the same series) again and again ----
 
 const HISTORY_SIZE = 30;
+// "Pure Random Music": when on, picks ignore the history and the series rules (only the pack
+// that is playing right now is skipped, when there is more than one).
+export const varietySettings = { pureRandom: false };
 // Packs played lately, oldest first. Saved in the config file as "recent_music".
 export let recentMusic: string[] = [];
 
@@ -99,6 +102,11 @@ export function chooseVaried(
   recent: string[],
   rnd: () => number = Math.random
 ): string {
+  if (varietySettings.pureRandom) {
+    const others = names.filter((x) => x !== current);
+    const all = others.length > 0 ? others : names;
+    return all[Math.floor(rnd() * all.length)];
+  }
   const n = names.length;
   const avoidCount = Math.min(12, Math.floor(n / 2));
   const avoidPacks = new Set([...recent.slice(-avoidCount), current]);

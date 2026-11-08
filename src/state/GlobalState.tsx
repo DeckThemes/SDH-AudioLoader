@@ -54,6 +54,7 @@ interface PublicGlobalState {
   dailyMusicDate: string;
   dailyMusicPick: string;
   replayRandomMusic: boolean;
+  pureRandomMusic: boolean;
   waitForMovie: boolean;
   normalizeVolume: boolean;
   showNowPlaying: boolean;
@@ -158,6 +159,7 @@ export class GlobalState {
   private dailyMusicDate: string = "";
   private dailyMusicPick: string = "";
   private replayRandomMusic: boolean = false;
+  private pureRandomMusic: boolean = false;
   private waitForMovie: boolean = false;
   private normalizeVolume: boolean = false;
   private showNowPlaying: boolean = false;
@@ -199,6 +201,7 @@ export class GlobalState {
       dailyMusicDate: this.dailyMusicDate,
       dailyMusicPick: this.dailyMusicPick,
       replayRandomMusic: this.replayRandomMusic,
+      pureRandomMusic: this.pureRandomMusic,
       waitForMovie: this.waitForMovie,
       normalizeVolume: this.normalizeVolume,
       showNowPlaying: this.showNowPlaying,

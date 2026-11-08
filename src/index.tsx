@@ -26,6 +26,7 @@ import {
   getTodayKey,
   loadLoudnessCache,
   loadRecentMusic,
+  varietySettings,
   nowPlayingSettings,
   loudnessSettings,
   normalizeRunningMusic,
@@ -62,6 +63,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     dailyMusicDate,
     dailyMusicPick,
     replayRandomMusic,
+    pureRandomMusic,
     waitForMovie,
     normalizeVolume,
     showNowPlaying,
@@ -289,6 +291,18 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 onChange={(value: boolean) => {
                   setGlobalState("replayRandomMusic", value);
                   python.setConfig({ random_music_every_replay: value });
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ToggleField
+                label="Pure Random Music"
+                description="Turns off the variety rules. Music is picked completely at random, so a pack or series can come back soon. Only the music that is playing right now is skipped."
+                checked={pureRandomMusic}
+                onChange={(value: boolean) => {
+                  setGlobalState("pureRandomMusic", value);
+                  varietySettings.pureRandom = value;
+                  python.setConfig({ pure_random_music: value });
                 }}
               />
             </PanelSectionRow>
@@ -527,6 +541,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configDailyDate = data?.daily_music_date ?? "";
       const configDailyPick = data?.daily_music_pick ?? "";
       const configReplay = data?.random_music_every_replay ?? false;
+      const configPureRandom = data?.pure_random_music ?? false;
       const configWaitMovie = data?.wait_for_startup_movie ?? false;
       const configNormalize = data?.normalize_volume ?? false;
       const configNowPlaying = data?.show_now_playing ?? false;
@@ -540,6 +555,8 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("dailyMusicDate", configDailyDate);
       setGlobalState("dailyMusicPick", configDailyPick);
       setGlobalState("replayRandomMusic", configReplay);
+      setGlobalState("pureRandomMusic", configPureRandom);
+      varietySettings.pureRandom = configPureRandom;
       setGlobalState("waitForMovie", configWaitMovie);
       setGlobalState("normalizeVolume", configNormalize);
       setGlobalState("showNowPlaying", configNowPlaying);
