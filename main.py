@@ -21,7 +21,8 @@ starter_config_data = {
   "wait_for_startup_movie": False,
   "normalize_volume": False,
   "show_now_playing": False,
-  "loudness_cache": {}
+  "loudness_cache": {},
+  "recent_music": []
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -275,7 +276,8 @@ class Plugin:
             "wait_for_startup_movie": False,
             "normalize_volume": False,
             "show_now_playing": False,
-            "loudness_cache": {}
+            "loudness_cache": {},
+            "recent_music": []
         }
 
         Log("Initializing Audio Loader...")

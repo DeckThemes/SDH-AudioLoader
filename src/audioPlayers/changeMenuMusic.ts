@@ -1,6 +1,7 @@
 import { Mappings, Pack } from "../classes";
 import * as python from "../python";
 import { announceMusic } from "./nowPlaying";
+import { rememberMusic } from "./dailyMusic";
 import { applyMusicVolume, cachedMusicGain, loudnessSettings, normalizeMusic } from "./loudness";
 
 // Other plugins can pause the music through window.AUDIOLOADER_MENUMUSIC. The music guard must
@@ -104,6 +105,7 @@ export function changeMenuMusic(
 
     // "Show Now Playing": tell which pack the music comes from
     announceMusic(currentPack);
+    rememberMusic(currentPack?.name);
 
     // Measure this music (once) if it is not known yet, and fix its volume when that is done
     if (loudnessSettings.enabled && currentPack) {

@@ -25,6 +25,7 @@ import {
   ensureEffectGain,
   getTodayKey,
   loadLoudnessCache,
+  loadRecentMusic,
   nowPlayingSettings,
   loudnessSettings,
   normalizeRunningMusic,
@@ -544,6 +545,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("showNowPlaying", configNowPlaying);
       nowPlayingSettings.enabled = configNowPlaying;
       loadLoudnessCache(data?.loudness_cache);
+      loadRecentMusic(data?.recent_music);
       loudnessSettings.enabled = configNormalize;
       // Starts measuring the active sound pack when "Normalize Volume" is on
       refreshEffectVolume();
