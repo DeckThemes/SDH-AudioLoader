@@ -5,7 +5,7 @@
 Encore adds new options to the "legacy" menu music of Audio Loader (turn on **Enable Legacy Features** in the plugin menu to see them):
 
 - **New Music Every Day**: picks a different music pack each day. Choosing "None" keeps the music off until the next day.
-- **New Music Every Replay**: every time the music starts again (when it ends, after a game closes, or after the Deck wakes up), it switches to a different music pack.
+- **New Music Every Replay**: every time the music starts again (when it ends, after a game closes, or after the Deck wakes up), it switches to a different music pack. It avoids packs played recently and packs from the same series (like several games of one franchise), so you hear more variety.
 - **Show Now Playing**: a small message with the music pack's name and its credits (the pack's author, shortened with "..." if long) whenever new music starts. A long pack name scrolls so it can be read completely.
 - **Wait for Startup Movie**: the music waits until the Deck's startup movie (or wake-up movie) has finished before it begins. It looks for a video playing with sound; if it finds none within a couple of seconds, the music starts normally.
 - **Normalize Volume**: makes every sound pack and music pack about equally loud, so the two volume sliders mean the same thing for all packs. Each pack is measured the first time it is used (a few seconds; the result is saved). Quiet packs are boosted and loud ones turned down, by at most about 12 dB. Steam's own default sounds are not changed.
