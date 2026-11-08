@@ -488,7 +488,11 @@ export default definePlugin((serverApi: ServerAPI) => {
       // a new day still comes from "New Music Every Day")
       if (configLegacyEnabled && configReplay && !newDay && musicToPlay !== "None") {
         const pick = pickReplayMusic(soundPacks, musicToPlay);
-        if (pick) musicToPlay = pick;
+        if (pick) {
+          musicToPlay = pick;
+          // Remember what plays now, so the next start picks something different from it
+          python.setConfig({ selected_music: pick });
+        }
       }
 
       // Plays menu music initially only if legacy settings are enabled

@@ -53,6 +53,6 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           cd out
-          zip -r "../Audio-Loader-Encore-${TAG}.zip" "Audio Loader Encore"
+          zip -r "../Audio-Loader-Encore.zip" "Audio Loader Encore"
           cd ..
-          gh release upload "$TAG" "Audio-Loader-Encore-${TAG}.zip" --clobber
+          gh release upload "$TAG" "Audio-Loader-Encore.zip" --clobber

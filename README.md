@@ -20,7 +20,7 @@ Encore is not in the Decky plugin store, but Decky can install it straight from 
 2. **Uninstall the original Audio Loader first** (in Decky's plugin list), because the two would fight over the same sounds. Your sound packs and settings stay where they are.
 3. Open the Decky menu, go to **Settings** (the gear), then **General**, and turn on **Developer Mode**.
 4. Open the new **Developer** page and choose **Install Plugin from URL**.
-5. Paste this link and install: `https://github.com/jwvdqx/SDH-AudioLoader-Encore/releases/download/v1.0.0/Audio-Loader-Encore-v1.0.0.zip`
+5. Paste this link and install: `https://github.com/jwvdqx/SDH-AudioLoader-Encore/releases/latest/download/Audio-Loader-Encore.zip`
 6. Decky may ask you to confirm. Accept. If the plugin does not show up, restart Decky Loader or the Deck.
 
 You can also download the zip from the [Releases page](../../releases) and copy the `Audio Loader Encore` folder into `/home/deck/homebrew/plugins/` yourself.

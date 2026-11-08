@@ -4,7 +4,7 @@ import { changeMenuMusic, menuMusicControl } from "./changeMenuMusic";
 import { pickReplayMusic, pickTodaysMusic } from "./dailyMusic";
 
 // Shown in the first on-screen message and in the settings, to tell which build is installed
-export const BUILD_TAG = "song v5";
+export const BUILD_TAG = "v1.0.1";
 
 // Small on-screen messages that show what the music guard is doing. They are also written to the
 // Decky log. Set this to false once everything works.
@@ -60,6 +60,9 @@ export function playRandomMusic(state: GlobalState): boolean {
   const pick = pickReplayMusic(s.soundPacks, s.selectedMusic);
   if (!pick) return false;
   python.logEvent(`New music for the replay: ${pick}`);
+  // Remember what is playing now, so the next start (for example coming back from Desktop Mode)
+  // picks something different from it
+  python.setConfig({ selected_music: pick });
   changeMenuMusic(
     pick,
     s.menuMusic,
@@ -155,6 +158,7 @@ export async function restoreMusic(state: GlobalState, reason: Reason): Promise<
       if (pick) {
         musicToPlay = pick;
         setGlobalState("selectedMusic", pick);
+        python.setConfig({ selected_music: pick });
       }
     }
     if (musicToPlay === "None") {
