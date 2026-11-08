@@ -131,6 +131,10 @@ export function setConfig(configObj: object) {
   return server!.callPluginMethod("set_config", { configObj: configObj });
 }
 
+export function listPackFiles(packPath: string): Promise<any> {
+  return server!.callPluginMethod("list_pack_files", { pack_path: packPath });
+}
+
 export function dummyFunction(): Promise<any> {
   return server!.callPluginMethod("dummy_function", {});
 }

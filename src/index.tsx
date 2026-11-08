@@ -19,8 +19,16 @@ import { RiFolderMusicFill } from "react-icons/ri";
 import * as api from "./api";
 import { Permissions } from "./apiTypes";
 import {
+  applyMusicVolume,
   changeMenuMusic,
+  effectVolumeFor,
+  ensureEffectGain,
   getTodayKey,
+  loadLoudnessCache,
+  loudnessSettings,
+  normalizeRunningMusic,
+  refreshEffectVolume,
+  setEffectVolumeApplier,
   pickReplayMusic,
   menuMusicControl,
   pickTodaysMusic,
@@ -53,9 +61,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
     dailyMusicPick,
     replayRandomMusic,
     waitForMovie,
+    normalizeVolume,
     soundVolume,
     musicVolume,
-    gainNode,
     dummyFuncResult,
     setGlobalState,
   } = useGlobalState();
@@ -138,6 +146,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             }
             onChange={async (option) => {
               setGlobalState("activeSound", option.label as string);
+              refreshEffectVolume();
 
               const configObj = {
                 selected_pack: option.label,
@@ -159,9 +168,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             max={1}
             step={0.01}
             onChange={(value) => {
-              gainNode.gain.setValueAtTime(value, gainNode.context.currentTime + 0.01);
-              // gainNode.gain.value = value;
               setGlobalState("soundVolume", value);
+              // Sets the gain node (with the pack's "Normalize Volume" gain, when that is on)
+              refreshEffectVolume();
               const configObj = {
                 selected_pack: activeSound,
                 selected_music: selectedMusic,
@@ -172,6 +181,24 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
               python.setConfig(configObj);
             }}
             icon={<FaVolumeUp />}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ToggleField
+            label="Normalize Volume"
+            description="Makes every sound pack and music pack about equally loud, so the volume sliders mean the same for all of them. A pack is measured the first time you use it, which takes a few seconds."
+            checked={normalizeVolume}
+            onChange={(value: boolean) => {
+              loudnessSettings.enabled = value;
+              setGlobalState("normalizeVolume", value);
+              python.setConfig({ normalize_volume: value });
+              // Fix the music that is playing right now, and the sound effects
+              if (menuMusic) {
+                applyMusicVolume(menuMusic, musicVolume);
+                if (value) normalizeRunningMusic(menuMusic);
+              }
+              refreshEffectVolume();
+            }}
           />
         </PanelSectionRow>
         <PanelSectionRow>
@@ -283,7 +310,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
                 step={0.01}
                 onChange={(value) => {
                   setGlobalState("musicVolume", value);
-                  menuMusic.volume = value;
+                  applyMusicVolume(menuMusic, value);
                   // @ts-ignore
                   window.AUDIOLOADER_MENUMUSIC.volume = value;
                   const configObj = {
@@ -396,10 +423,13 @@ export default definePlugin((serverApi: ServerAPI) => {
     "GetActiveDestination",
     async function (_, ret) {
       try {
-        const { soundVolume } = state.getPublicState();
+        const { soundVolume, soundPacks, activeSound } = state.getPublicState();
         const setGlobalState = state.setGlobalState.bind(state);
+        const activePack = soundPacks.find((e) => e.name === activeSound);
         // @ts-ignore
-        const gainNode = new GainNode(this.context, { gain: soundVolume });
+        const gainNode = new GainNode(this.context, {
+          gain: effectVolumeFor(soundVolume, activePack),
+        });
         gainNode.connect(await ret);
         setGlobalState("gainNode", gainNode);
         return gainNode;
@@ -458,6 +488,19 @@ export default definePlugin((serverApi: ServerAPI) => {
   );
   setGlobalState("soundPatchInstance", patchInstance);
 
+  // "Normalize Volume": puts the current sound volume (with the active pack's gain) on the gain node
+  setEffectVolumeApplier(() => {
+    const { gainNode, soundVolume, soundPacks, activeSound } = state.getPublicState();
+    const activePack = soundPacks.find((e) => e.name === activeSound);
+    if (gainNode) {
+      gainNode.gain.setValueAtTime(
+        effectVolumeFor(soundVolume, activePack),
+        gainNode.context.currentTime + 0.01
+      );
+    }
+    ensureEffectGain(activePack);
+  });
+
   python.getAndSetSoundPacks().then(() => {
     python.resolve(python.getConfig(), (data: any) => {
       // This sets the config data in globalState
@@ -470,6 +513,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configDailyPick = data?.daily_music_pick ?? "";
       const configReplay = data?.random_music_every_replay ?? false;
       const configWaitMovie = data?.wait_for_startup_movie ?? false;
+      const configNormalize = data?.normalize_volume ?? false;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
       setGlobalState("selectedMusic", configSelectedMusic);
@@ -481,6 +525,11 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("dailyMusicPick", configDailyPick);
       setGlobalState("replayRandomMusic", configReplay);
       setGlobalState("waitForMovie", configWaitMovie);
+      setGlobalState("normalizeVolume", configNormalize);
+      loadLoudnessCache(data?.loudness_cache);
+      loudnessSettings.enabled = configNormalize;
+      // Starts measuring the active sound pack when "Normalize Volume" is on
+      refreshEffectVolume();
 
       const { soundPacks } = state.getPublicState();
 
@@ -607,6 +656,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       }
       soundPatchInstance.unpatch();
       volumePatchInstance.unpatch();
+      setEffectVolumeApplier(null);
       AppStateRegistrar.unregister();
       stopMusicGuard();
     },

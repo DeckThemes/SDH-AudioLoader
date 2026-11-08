@@ -18,7 +18,9 @@ starter_config_data = {
   "daily_music_date": "",
   "daily_music_pick": "",
   "random_music_every_replay": False,
-  "wait_for_startup_movie": False
+  "wait_for_startup_movie": False,
+  "normalize_volume": False,
+  "loudness_cache": {}
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -120,6 +122,24 @@ class Plugin:
         # Lets the screen side write into the Decky log, to help find problems
         Log("Audio Loader (screen) - {}".format(message))
         return True
+
+    async def list_pack_files(self, pack_path: str) -> dict:
+        # Lists the audio files of one pack (name -> size in bytes). The screen side uses it
+        # for "Normalize Volume".
+        try:
+            base = os.path.realpath(get_pack_path())
+            folder = os.path.realpath(os.path.join(base, pack_path))
+            if not folder.startswith(base + os.sep):
+                return {}
+            files = {}
+            for name in sorted(os.listdir(folder)):
+                full = os.path.join(folder, name)
+                if os.path.isfile(full) and name.lower().endswith((".mp3", ".ogg", ".wav", ".flac", ".m4a", ".opus")):
+                    files[name] = os.path.getsize(full)
+            return files
+        except Exception as e:
+            Log("Audio Loader - Could not list the files of {}: {}".format(pack_path, e))
+            return {}
 
     async def get_sound_packs(self) -> list:
         return [x.to_dict() for x in self.soundPacks]
@@ -251,7 +271,9 @@ class Plugin:
             "daily_music_date": "",
             "daily_music_pick": "",
             "random_music_every_replay": False,
-            "wait_for_startup_movie": False
+            "wait_for_startup_movie": False,
+            "normalize_volume": False,
+            "loudness_cache": {}
         }
 
         Log("Initializing Audio Loader...")

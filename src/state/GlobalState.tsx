@@ -55,6 +55,7 @@ interface PublicGlobalState {
   dailyMusicPick: string;
   replayRandomMusic: boolean;
   waitForMovie: boolean;
+  normalizeVolume: boolean;
   isInstalling: boolean;
 }
 
@@ -157,6 +158,7 @@ export class GlobalState {
   private dailyMusicPick: string = "";
   private replayRandomMusic: boolean = false;
   private waitForMovie: boolean = false;
+  private normalizeVolume: boolean = false;
   private browserPackList: packDbEntry[] = [];
   private searchFieldValue: string = "";
   private selectedSort: number = 3;
@@ -196,6 +198,7 @@ export class GlobalState {
       dailyMusicPick: this.dailyMusicPick,
       replayRandomMusic: this.replayRandomMusic,
       waitForMovie: this.waitForMovie,
+      normalizeVolume: this.normalizeVolume,
       browserPackList: this.browserPackList,
       searchFieldValue: this.searchFieldValue,
       selectedSort: this.selectedSort,

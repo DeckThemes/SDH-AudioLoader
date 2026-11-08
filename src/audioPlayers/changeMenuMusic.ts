@@ -1,5 +1,6 @@
 import { Mappings, Pack } from "../classes";
 import * as python from "../python";
+import { applyMusicVolume, cachedMusicGain, loudnessSettings, normalizeMusic } from "./loudness";
 
 // Other plugins can pause the music through window.AUDIOLOADER_MENUMUSIC. The music guard must
 // not fight them, so a pause made that way is remembered here until play() is called again or
@@ -57,16 +58,21 @@ export function changeMenuMusic(
   if (newMusic !== "None" && gamesRunning.length === 0) {
     const currentPack = soundPacks.find((e) => e.name === newMusic);
 
-    const musicFilePath = createFullPath(
-      findMapping("menu_music.mp3", currentPack?.mappings, currentPack?.truncatedPackPath),
+    const musicFileName = findMapping(
+      "menu_music.mp3",
+      currentPack?.mappings,
       currentPack?.truncatedPackPath
     );
+    const musicFilePath = createFullPath(musicFileName, currentPack?.truncatedPackPath);
     const introFilePath = createFullPath(
       findMapping("intro_music.mp3", currentPack?.mappings, currentPack?.truncatedPackPath),
       currentPack?.truncatedPackPath
     );
 
     let newMenuMusic: HTMLAudioElement;
+
+    // "Normalize Volume": the gain of this pack's music, if it was measured before
+    const musicGain = cachedMusicGain(currentPack?.truncatedPackPath, musicFileName);
 
     // If there is an intro, it must play that, and add an onended listener to change to the normal music
     // If there's no intro, it can just go straight to playAndLoopMenuMusic()
@@ -79,12 +85,19 @@ export function changeMenuMusic(
       }
       newMenuMusic = new Audio(introFilePath);
       newMenuMusic.onended = handleIntroEnd;
-      newMenuMusic.volume = musicVolume;
+      (newMenuMusic as any).alGain = musicGain;
+      applyMusicVolume(newMenuMusic, musicVolume);
       newMenuMusic.play().catch(reportPlayError);
       createWindowObject(newMenuMusic);
     } else {
       newMenuMusic = new Audio(musicFilePath);
+      (newMenuMusic as any).alGain = musicGain;
       playAndLoopMenuMusic();
+    }
+
+    // Measure this music (once) if it is not known yet, and fix its volume when that is done
+    if (loudnessSettings.enabled && currentPack) {
+      normalizeMusic(newMenuMusic, currentPack.truncatedPackPath, musicFileName);
     }
 
     function playAndLoopMenuMusic(wasFromIntro: boolean = false) {
@@ -92,7 +105,7 @@ export function changeMenuMusic(
       newMenuMusic.loop = true;
       // If someone has changed the volume before the intro ended, this would overwrite it with the original as this function does not have up to date data
       if (!wasFromIntro) {
-        newMenuMusic.volume = musicVolume;
+        applyMusicVolume(newMenuMusic, musicVolume);
       }
       createWindowObject(newMenuMusic);
     }
@@ -101,7 +114,7 @@ export function changeMenuMusic(
     // TODO: Not actually sure if it needs to be set the 2nd time
     function createWindowObject(menuMusic: HTMLAudioElement) {
       const setVolume = (value: number) => {
-        menuMusic.volume = value;
+        applyMusicVolume(menuMusic, value);
       };
       // @ts-ignore
       window.AUDIOLOADER_MENUMUSIC = {
