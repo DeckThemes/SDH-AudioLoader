@@ -31,25 +31,24 @@ function titleFor(text: string): { title: any; durationMs: number } {
   if (text.length <= SCROLL_FROM_CHARS) return { title: text, durationMs: 8000 };
   const scrollS = Math.min(8, Math.max(3, text.length * 0.16));
   const durationMs = Math.round((SCROLL_DELAY_S + scrollS + HOLD_AFTER_S) * 1000);
-  // The text starts at the left edge. At the end of the animation its right edge is at the right
-  // edge of the box (left: 100% is the box width, translateX(-100%) is the text width).
+  // Smooth scrolling: only "transform" is animated (the browser can do that on the graphics card,
+  // so it stays smooth). The distance is measured once the title is on screen: the text moves
+  // left by exactly as much as it is wider than its box, so its end stops at the right edge.
+  const start = (box: HTMLElement | null) => {
+    if (!box || (box as any).__alStarted) return;
+    const span = box.firstElementChild as HTMLElement | null;
+    if (!span || typeof (span as any).animate !== "function") return;
+    (box as any).__alStarted = true;
+    const distance = span.scrollWidth - box.clientWidth;
+    if (distance <= 0) return;
+    span.animate(
+      [{ transform: "translate3d(0, 0, 0)" }, { transform: `translate3d(${-distance}px, 0, 0)` }],
+      { duration: scrollS * 1000, delay: SCROLL_DELAY_S * 1000, easing: "linear", fill: "both" }
+    );
+  };
   const title = (
-    <div style={{ overflow: "hidden", whiteSpace: "nowrap", position: "relative", width: "100%" }}>
-      <style>
-        {`@keyframes audioloader_scroll_title {
-          from { left: 0%; transform: translateX(0%); }
-          to { left: 100%; transform: translateX(-100%); }
-        }`}
-      </style>
-      <span
-        style={{
-          position: "relative",
-          display: "inline-block",
-          animation: `audioloader_scroll_title ${scrollS}s ease-in-out ${SCROLL_DELAY_S}s 1 both`,
-        }}
-      >
-        {text}
-      </span>
+    <div ref={start} style={{ overflow: "hidden", whiteSpace: "nowrap", width: "100%" }}>
+      <span style={{ display: "inline-block", willChange: "transform" }}>{text}</span>
     </div>
   );
   return { title, durationMs };
