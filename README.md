@@ -68,7 +68,9 @@ You can also download the zip from the [Releases page](../../releases) and copy 
 `pnpm install` and then `pnpm build` create `dist/index.js`. The GitHub Action in `.github/workflows/build.yml` does this automatically and collects the files the Deck needs.
 
 ## Credits and license
-Based on Audio Loader by EMERALD0874 and Beebles, MIT license (see `LICENSE`, the original copyright notice is kept). Encore changes by jwvdqx, made with the help of Claude (Anthropic).
+Based on Audio Loader by EMERALD0874 and Beebles. Encore changes by jwvdqx, made with the help of Claude (Anthropic).
+
+**Which license applies:** the whole project is released under the **MIT license**, the same as the original Audio Loader (the original copyright notice is kept in `LICENSE`). The `LICENSE` file also contains a second text, the **BSD 3-Clause license of Steam Deck Homebrew**. It belongs to the plugin template that the original Audio Loader was built from, so it covers the parts that come from that template (the basic project and build setup). It is kept because its terms require the notice to stay. It does not change the license of Encore's own additions, which are MIT like the rest.
 
 ---
 
