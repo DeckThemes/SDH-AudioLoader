@@ -1,4 +1,5 @@
 import json, tempfile, asyncio
+import ssl
 import urllib.request
 import shutil
 import os, sys
@@ -143,7 +144,13 @@ class Plugin:
 
         def fetch():
             req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "AudioLoaderEncore"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            # Decky's own Python may not know the system certificates, so point it at them when they exist
+            ctx = ssl.create_default_context()
+            for cafile in ("/etc/ssl/certs/ca-certificates.crt", "/etc/ca-certificates/extracted/tls-ca-bundle.pem"):
+                if os.path.isfile(cafile):
+                    ctx = ssl.create_default_context(cafile=cafile)
+                    break
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
                 return json.loads(resp.read().decode("utf-8"))
 
         try:

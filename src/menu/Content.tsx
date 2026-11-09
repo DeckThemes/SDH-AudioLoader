@@ -107,7 +107,7 @@ const Header: VFC<{ version: string }> = ({ version }) => {
       <div style={{ ...cardStyle, padding: "8px 12px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontWeight: 700, color: ACCENT }}>Audio Loader Encore</span>
-          <span style={smallText}>v{version || "?"}</span>
+          <span style={smallText}>v{version || BUILD_TAG.replace(/^v/, "")}</span>
         </div>
         {newer && (
           <div style={{ ...smallText, opacity: 1, marginTop: "4px", color: "#9fe3a5" }}>
@@ -706,7 +706,7 @@ const InfoTab: VFC<{ version: string }> = ({ version }) => {
   const updateText = () => {
     if (checking) return "Checking...";
     if (!info) return "Not checked yet.";
-    if (info.error) return "Could not check (no internet?).";
+    if (info.error) return `Could not check: ${String(info.error).slice(0, 120)}`;
     return isNewer(info.latest, version) ? `Update available: v${info.latest}` : `You have the newest version (v${info.latest}).`;
   };
 
@@ -735,7 +735,7 @@ const InfoTab: VFC<{ version: string }> = ({ version }) => {
   return (
     <PanelSection>
       <Group id="info-updates" title="Updates">
-        <Info>Installed: v{version || "?"} ({BUILD_TAG})</Info>
+        <Info>Installed: v{version || BUILD_TAG.replace(/^v/, "")} ({BUILD_TAG})</Info>
         <Info>{updateText()}</Info>
         <PanelSectionRow>
           <ButtonItem
