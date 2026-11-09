@@ -665,6 +665,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       nowPlayingSettings.enabled = configNowPlaying;
       loadLoudnessCache(data?.loudness_cache);
       loadRecentMusic(data?.recent_music);
+      const loadedHistoryCount = Array.isArray(data?.recent_music) ? data.recent_music.length : 0;
       loudnessSettings.enabled = configNormalize;
       // Starts measuring the active sound pack when "Normalize Volume" is on
       refreshEffectVolume();
@@ -697,6 +698,13 @@ export default definePlugin((serverApi: ServerAPI) => {
           python.setConfig({ selected_music: pick });
         }
       }
+
+      // Written to the Decky log, so a repeat can be explained afterwards
+      python.logEvent(
+        `Startup music: saved="${configSelectedMusic}", legacy=${configLegacyEnabled}, daily=${configDailyRandom}, ` +
+          `newDay=${newDay}, everyReplay=${configReplay}, packs=${soundPacks.length}, ` +
+          `history=${loadedHistoryCount}, chosen="${musicToPlay}"`
+      );
 
       // Plays menu music initially only if legacy settings are enabled
       if (configLegacyEnabled) {
