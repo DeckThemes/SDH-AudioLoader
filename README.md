@@ -39,7 +39,7 @@ The toggles can be used together. With "New Music Every Day" and "New Music Ever
 The two menu toggles of the low-pass filter read which side menu Steam has open. The game loading toggle uses Steam's game launch events and ends when the game process starts.
 
 ## Honest status
-Tested on one Steam Deck, mainly the daily toggle and the sleep/wake fix. Everything else was checked with simulated players only, and the menu layout was never seen inside Steam before release. Parts that depend on Steam's own events (menu detection for the low-pass filter, game loading, battery, new audio devices, notification sounds) may behave differently on a real Deck. If something does not work, please open an issue, say which toggles you had on, and paste the **Copy Debug Info** text.
+Encore is used and tested on one Steam Deck by its author, mainly the daily toggle, the sleep/wake fix and the new menu. Most other features were also checked with simulated players before release, so some of them may still behave differently on your Deck. Parts that depend on Steam's own events (menu detection for the low-pass filter, game loading, battery, new audio devices, notification sounds, the startup movie wait) are the most likely to need fixes. Version 1.3.1 fixed **Wait for Startup Movie**, which did not work in 1.3.0 (it is not confirmed on a real Deck yet), and 1.3.2 made the selected tab or group visible in the menu. If something does not work, please open an issue (if the Issues tab is not available yet, use the Discussions tab or contact the author), say which toggles you had on, and paste the **Copy Debug Info** text.
 
 ## Test checklist (for anyone trying Encore)
 1. Install, turn on **Enable Legacy Features**, pick a music pack. Music plays.
