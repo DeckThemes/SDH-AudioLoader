@@ -36,6 +36,7 @@ import {
   startMusicLowPassContextMonitor,
   configureMusicLowPass,
   timeOfDayPack,
+  STARTUP_APPEAR_MS,
   waitForMovies,
 } from "./audioPlayers";
 import { AudioParent } from "./gamepadAudioFinder";
@@ -322,7 +323,7 @@ export default definePlugin((serverApi: ServerAPI) => {
           // "Wait for Startup Movie": start when the movie is over, unless something else
           // (like the user picking music) has started the music in the meantime
           menuMusicControl.waitingForMovie = true;
-          waitForMovies()
+          waitForMovies(STARTUP_APPEAR_MS)
             .catch(() => {})
             .then(() => {
               menuMusicControl.waitingForMovie = false;
