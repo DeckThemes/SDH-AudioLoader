@@ -7,7 +7,7 @@ import { waitForMovies } from "./movieWait";
 import { note } from "./stats";
 
 // Shown in the first on-screen message and in the settings, to tell which build is installed
-export const BUILD_TAG = "v1.3.3";
+export const BUILD_TAG = "v1.3.4";
 
 // Small on-screen messages that show what the music guard is doing. They are also written to the
 // Decky log. Set this to false once everything works.

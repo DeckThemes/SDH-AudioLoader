@@ -1,4 +1,4 @@
-import asyncio, tempfile, os, zipfile, aiohttp
+import asyncio, tempfile, os, ssl, zipfile, aiohttp
 from audio_utils import Result, Log, get_pack_path, AUDIO_LOADER_VERSION
 
 async def run(command : str) -> str:
@@ -12,13 +12,30 @@ async def run(command : str) -> str:
 
     return stdout.decode()
 
+def make_ssl_context() -> ssl.SSLContext:
+    # Normal certificate checking. Decky's own Python may not know the system certificates,
+    # so point it at them when they exist.
+    for cafile in ("/etc/ssl/certs/ca-certificates.crt", "/etc/ca-certificates/extracted/tls-ca-bundle.pem"):
+        if os.path.isfile(cafile):
+            return ssl.create_default_context(cafile=cafile)
+    return ssl.create_default_context()
+
+def safe_extract(zip_file: zipfile.ZipFile, target: str) -> None:
+    # Unzips only files that stay inside the target folder (no "../" or absolute paths)
+    base = os.path.realpath(target)
+    for member in zip_file.infolist():
+        dest = os.path.realpath(os.path.join(base, member.filename))
+        if dest != base and not dest.startswith(base + os.sep):
+            raise Exception(f"Unsafe path in the zip file: {member.filename}")
+    zip_file.extractall(base)
+
 async def install(id : str, base_url : str) -> Result:
     if not base_url.endswith("/"):
         base_url = base_url + "/"
 
     url = f"{base_url}themes/{id}"
 
-    async with aiohttp.ClientSession(headers={"User-Agent": f"SDH-AudioLoader/{AUDIO_LOADER_VERSION}"}, connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
+    async with aiohttp.ClientSession(headers={"User-Agent": f"SDH-AudioLoader/{AUDIO_LOADER_VERSION}"}, connector=aiohttp.TCPConnector(ssl=make_ssl_context())) as session:
         try:
             async with session.get(url) as resp:
                 if resp.status != 200:
@@ -50,7 +67,7 @@ async def install(id : str, base_url : str) -> Result:
     Log(f"Unzipping {themeZipPath}")
     try:
         with zipfile.ZipFile(themeZipPath, 'r') as zip:
-            zip.extractall(get_pack_path())
+            safe_extract(zip, get_pack_path())
     except Exception as e:
         return Result(False, str(e))
 
