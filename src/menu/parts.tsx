@@ -7,7 +7,7 @@ import {
   SliderField,
   ToggleField,
 } from "decky-frontend-lib";
-import { CSSProperties, ReactNode, VFC } from "react";
+import { CSSProperties, ReactNode, useState, VFC } from "react";
 import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 import { updateSetting } from "../settings";
 import { useSettings } from "./useSettings";
@@ -29,6 +29,38 @@ export const cardStyle: CSSProperties = {
 };
 
 export const smallText: CSSProperties = { fontSize: "12px", lineHeight: 1.35, opacity: 0.75 };
+
+// A button that shows its own highlight while the controller (or mouse) is on it. Our buttons set
+// their own colors, which hides Steam's built-in highlight, so we draw one here.
+export const FocusButton: VFC<{
+  style: CSSProperties;
+  onClick: () => void;
+  children: ReactNode;
+}> = ({ style, onClick, children }) => {
+  const [focused, setFocused] = useState(false);
+  const on = () => setFocused(true);
+  const off = () => setFocused(false);
+  const highlight: CSSProperties = focused
+    ? {
+        border: "2px solid #ffffff",
+        boxShadow: "0 0 0 2px rgba(201, 160, 255, 0.9), 0 0 12px rgba(201, 160, 255, 0.7)",
+        filter: "brightness(1.35)",
+        transform: "scale(1.03)",
+      }
+    : {};
+  return (
+    <DialogButton
+      style={{ transition: "all 0.12s ease", ...style, ...highlight }}
+      onClick={onClick}
+      onFocus={on}
+      onBlur={off}
+      onGamepadFocus={on}
+      onGamepadBlur={off}
+    >
+      {children}
+    </DialogButton>
+  );
+};
 
 export const Note: VFC<{ children: ReactNode }> = ({ children }) => {
   const s = useSettings();
@@ -105,7 +137,7 @@ export const Group: VFC<{
   return (
     <>
       <PanelSectionRow>
-        <DialogButton
+        <FocusButton
           style={{
             width: "100%",
             display: "flex",
@@ -128,7 +160,7 @@ export const Group: VFC<{
         >
           {collapsed ? <FaChevronRight size={11} /> : <FaChevronDown size={11} />}
           <span>{title}</span>
-        </DialogButton>
+        </FocusButton>
       </PanelSectionRow>
       {!collapsed && children}
     </>

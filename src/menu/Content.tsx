@@ -49,7 +49,7 @@ import * as python from "../python";
 import { notifySettingsChanged, updateSetting } from "../settings";
 import { useSettings } from "./useSettings";
 import { GlobalState, useGlobalState } from "../state/GlobalState";
-import { ACCENT, cardStyle, Group, Info, Note, PANEL_BORDER, Slider, smallText, showTextWindow, Toggle } from "./parts";
+import { ACCENT, cardStyle, FocusButton, Group, Info, Note, PANEL_BORDER, Slider, smallText, showTextWindow, Toggle } from "./parts";
 import { checkUpdateOnce, forceUpdateCheck, getUpdateInfo, isNewer } from "./update";
 
 type TabId = "music" | "sounds" | "effects" | "library" | "info";
@@ -69,7 +69,7 @@ const TabRow: VFC<{ active: TabId; onChange: (id: TabId) => void }> = ({ active,
       {TABS.map((tab) => {
         const isActive = tab.id === active;
         return (
-          <DialogButton
+          <FocusButton
             key={tab.id}
             style={{
               flex: "1 1 0",
@@ -89,7 +89,7 @@ const TabRow: VFC<{ active: TabId; onChange: (id: TabId) => void }> = ({ active,
             onClick={() => onChange(tab.id)}
           >
             {tab.icon}
-          </DialogButton>
+          </FocusButton>
         );
       })}
     </Focusable>
