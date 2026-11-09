@@ -27,6 +27,9 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Small automatic checks (music picking, volume math, settings, zip safety). A failure stops the build.
+      - run: pnpm test
       - run: pnpm build
 
       # Stop with a clear error if the build did not produce the plugin file

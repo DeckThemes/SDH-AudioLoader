@@ -65,7 +65,7 @@ Encore is not in the Decky plugin store, but Decky can install it straight from 
 You can also download the zip from the [Releases page](../../releases) and copy the `Audio Loader Encore` folder into `/home/deck/homebrew/plugins/` yourself.
 
 ## Building it yourself
-`pnpm install` and then `pnpm build` create `dist/index.js`. The GitHub Action in `.github/workflows/build.yml` does this automatically and collects the files the Deck needs.
+`pnpm install` and then `pnpm build` create `dist/index.js`. The GitHub Action in `.github/workflows/build.yml` does this automatically and collects the files the Deck needs. It also runs a small set of automatic tests first (`pnpm test`): music picking, volume math, saved settings and pack zip safety. If one fails, the build stops.
 
 ## Credits and license
 Based on Audio Loader by EMERALD0874 and Beebles. Encore changes by jwvdqx, made with the help of Claude (Anthropic).
