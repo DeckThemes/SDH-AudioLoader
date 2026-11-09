@@ -1,4 +1,5 @@
 import json, tempfile, asyncio
+import urllib.request
 import shutil
 import os, sys
 from logging import getLogger
@@ -124,6 +125,34 @@ class Plugin:
 
     async def get_loader_version(self) -> int:
         return AUDIO_LOADER_VERSION
+
+    async def get_plugin_version(self) -> str:
+        # The version written in package.json next to this file
+        try:
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "package.json")
+            with open(path, "r") as fp:
+                return str(json.load(fp).get("version", ""))
+        except Exception as e:
+            Log("Audio Loader - Could not read the plugin version: {}".format(e))
+            return ""
+
+    async def check_for_update(self) -> dict:
+        # Asks GitHub for the newest Encore release. Never raises: problems come back as "error".
+        current = await self.get_plugin_version()
+        url = "https://api.github.com/repos/jwvdqx/SDH-AudioLoader-Encore/releases/latest"
+
+        def fetch():
+            req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "AudioLoaderEncore"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+
+        try:
+            data = await asyncio.get_event_loop().run_in_executor(None, fetch)
+            latest = str(data.get("tag_name", "")).lstrip("vV")
+            return {"current": current, "latest": latest, "url": data.get("html_url", ""), "error": ""}
+        except Exception as e:
+            Log("Audio Loader - Update check failed: {}".format(e))
+            return {"current": current, "latest": "", "url": "", "error": str(e)}
 
     async def log_message(self, message: str) -> bool:
         # Lets the screen side write into the Decky log, to help find problems

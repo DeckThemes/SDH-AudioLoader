@@ -1,47 +1,42 @@
 import {
   afterPatch,
   beforePatch,
-  ButtonItem,
   definePlugin,
-  DropdownItem,
-  PanelSection,
-  PanelSectionRow,
-  Router,
   ServerAPI,
-  SliderField,
   staticClasses,
   Tabs,
-  ToggleField,
 } from "decky-frontend-lib";
-import { useEffect, useMemo, VFC } from "react";
-import { FaMusic, FaVolumeUp } from "react-icons/fa";
+import { VFC } from "react";
 import { RiFolderMusicFill } from "react-icons/ri";
 import * as api from "./api";
 import { Permissions } from "./apiTypes";
 import {
-  applyMusicVolume,
   changeMenuMusic,
   effectVolumeFor,
+  endSleepTimerPause,
   ensureEffectGain,
-  getTodayKey,
   loadLoudnessCache,
   loadRecentMusic,
-  varietySettings,
+  maybeDuckForSound,
+  menuMusicControl,
+  note,
   nowPlayingSettings,
   loudnessSettings,
-  normalizeRunningMusic,
-  refreshEffectVolume,
-  setEffectVolumeApplier,
+  pauseMusicSmooth,
   pickReplayMusic,
-  menuMusicControl,
   pickTodaysMusic,
   playRandomMusic,
-  waitForMovies,
+  refreshEffectVolume,
+  resumeMusicSmooth,
+  setEffectVolumeApplier,
   startMusicGuard,
-  configureMusicLowPass,
-  previewMusicLowPass,
-  startMusicLowPassContextMonitor,
+  startMusicLimits,
+  stopFx,
   stopMusicLowPassAudio,
+  startMusicLowPassContextMonitor,
+  configureMusicLowPass,
+  timeOfDayPack,
+  waitForMovies,
 } from "./audioPlayers";
 import { AudioParent } from "./gamepadAudioFinder";
 import {
@@ -52,414 +47,10 @@ import {
   SubmissionsPage,
   UninstallPage,
 } from "./pack-manager";
+import { Content } from "./menu/Content";
 import * as python from "./python";
+import { loadSettings } from "./settings";
 import { GlobalState, GlobalStateContextProvider, useGlobalState } from "./state/GlobalState";
-
-const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
-  const {
-    activeSound,
-    gamesRunning,
-    soundPacks,
-    menuMusic,
-    legacyEnabled,
-    selectedMusic,
-    dailyRandomMusic,
-    dailyMusicDate,
-    dailyMusicPick,
-    replayRandomMusic,
-    pureRandomMusic,
-    waitForMovie,
-    normalizeVolume,
-    showNowPlaying,
-    lowPassSteamMenu,
-    lowPassQuickAccess,
-    lowPassGameLoading,
-    lowPassStrength,
-    soundVolume,
-    musicVolume,
-    dummyFuncResult,
-    setGlobalState,
-  } = useGlobalState();
-
-  useEffect(() => {
-    python.dummyFuncTest();
-  }, []);
-
-  function restartMusicPlayer(newMusic: string) {
-    changeMenuMusic(
-      newMusic,
-      menuMusic,
-      (key, val) => setGlobalState(key, val),
-      gamesRunning,
-      soundPacks,
-      musicVolume
-    );
-  }
-
-  function refetchLocalPacks() {
-    python.reloadBackend();
-  }
-
-  const SoundPackDropdownOptions = useMemo(() => {
-    return [
-      { label: "Default", data: -1 },
-      ...soundPacks
-        // Only shows sound packs
-        .filter((e) => !e.music)
-        .map((p, index) => ({ label: p.name, data: index }))
-        // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    ];
-  }, [soundPacks]);
-
-  const MusicPackDropdownOptions = useMemo(() => {
-    return [
-      { label: "None", data: -1 },
-      ...soundPacks
-        // Only show music packs
-        .filter((e) => e.music)
-        .map((p, index) => ({ label: p.name, data: index }))
-        // TODO: because this sorts after assigning indexes, the sort might make the indexes out of order, make sure this doesn't happen
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    ];
-  }, [soundPacks]);
-
-  if (!dummyFuncResult) {
-    return (
-      <PanelSectionRow>
-        <span>
-          AudioLoader failed to initialize, try reloading, and if that doesn't work, try restarting
-          your deck.
-        </span>
-      </PanelSectionRow>
-    );
-  }
-
-  return (
-    <div className="audioloader_QAM">
-      <style>
-        {`
-        .audioloader_QAM div[class^="gamepaddialog_FieldLabel_"] {
-          display: none;
-        }
-        `}
-      </style>
-      <PanelSection title="Packs">
-        <PanelSectionRow>
-          <DropdownItem
-            bottomSeparator="none"
-            onMenuWillOpen={() => refetchLocalPacks()}
-            menuLabel="Sound Pack"
-            rgOptions={SoundPackDropdownOptions}
-            selectedOption={
-              // activeSound now stores a string, this just finds the corresponding option for the label
-              // the "?? -2" is there incase find returns undefined (the currently selected theme was deleted or something)
-              // it NEEDS to be a nullish coalescing operator because 0 needs to be treated as true
-              SoundPackDropdownOptions.find((e) => e.label === activeSound)?.data ?? -1
-            }
-            onChange={async (option) => {
-              setGlobalState("activeSound", option.label as string);
-              refreshEffectVolume();
-
-              const configObj = {
-                selected_pack: option.label,
-                selected_music: selectedMusic,
-                sound_volume: soundVolume,
-                music_volume: musicVolume,
-                legacy_enabled: legacyEnabled,
-              };
-              python.setConfig(configObj);
-            }}
-          />
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <SliderField
-            bottomSeparator="standard"
-            label={undefined}
-            value={soundVolume}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(value) => {
-              setGlobalState("soundVolume", value);
-              // Sets the gain node (with the pack's "Normalize Volume" gain, when that is on)
-              refreshEffectVolume();
-              const configObj = {
-                selected_pack: activeSound,
-                selected_music: selectedMusic,
-                sound_volume: value,
-                music_volume: musicVolume,
-                legacy_enabled: legacyEnabled,
-              };
-              python.setConfig(configObj);
-            }}
-            icon={<FaVolumeUp />}
-          />
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ToggleField
-            label="Normalize Volume"
-            description="Makes every sound pack and music pack about equally loud, so the volume sliders mean the same for all of them. A pack is measured the first time you use it, which takes a few seconds."
-            checked={normalizeVolume}
-            onChange={(value: boolean) => {
-              loudnessSettings.enabled = value;
-              setGlobalState("normalizeVolume", value);
-              python.setConfig({ normalize_volume: value });
-              // Fix the music that is playing right now, and the sound effects
-              if (menuMusic) {
-                applyMusicVolume(menuMusic, musicVolume);
-                if (value) normalizeRunningMusic(menuMusic);
-              }
-              refreshEffectVolume();
-            }}
-          />
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ToggleField
-            label="Enable Legacy Features"
-            description="Legacy features are unsupported by Audio Loader maintainers. They may break at any time. Issues should be reported on our GitHub. Please do not reach out to us on Discord regarding legacy feature issues."
-            checked={legacyEnabled}
-            onChange={(value: boolean) => {
-              setGlobalState("legacyEnabled", value);
-              // With "New Music Every Day" on, turning legacy back on also checks the date
-              let musicToPlay = selectedMusic;
-              if (value && dailyRandomMusic) {
-                const choice = pickTodaysMusic(
-                  soundPacks,
-                  dailyMusicDate,
-                  dailyMusicPick,
-                  setGlobalState
-                );
-                if (choice) musicToPlay = choice.pick;
-              }
-              const configObj = {
-                selected_pack: activeSound,
-                selected_music: musicToPlay,
-                sound_volume: soundVolume,
-                music_volume: musicVolume,
-                legacy_enabled: value,
-              };
-              python.setConfig(configObj);
-              restartMusicPlayer(value ? musicToPlay : "None");
-            }}
-          />
-        </PanelSectionRow>
-        {legacyEnabled && (
-          <>
-            <PanelSectionRow>
-              <DropdownItem
-                bottomSeparator="none"
-                onMenuWillOpen={() => refetchLocalPacks()}
-                menuLabel="Music Pack"
-                rgOptions={MusicPackDropdownOptions}
-                selectedOption={
-                  MusicPackDropdownOptions.find((e) => e.label === selectedMusic)?.data ?? -1
-                }
-                onChange={async (option) => {
-                  const configObj = {
-                    selected_pack: activeSound,
-                    selected_music: option.label,
-                    sound_volume: soundVolume,
-                    music_volume: musicVolume,
-                    legacy_enabled: legacyEnabled,
-                  };
-                  python.setConfig(configObj);
-                  // If the music is picked by hand, that becomes today's music
-                  if (dailyRandomMusic) {
-                    const today = getTodayKey();
-                    setGlobalState("dailyMusicDate", today);
-                    setGlobalState("dailyMusicPick", option.label);
-                    python.setConfig({ daily_music_date: today, daily_music_pick: option.label });
-                  }
-                  restartMusicPlayer(legacyEnabled ? (option.label as string) : "None");
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ToggleField
-                label="New Music Every Day"
-                description={`Picks a different music pack each day: today one, tomorrow another. Choosing None keeps the music off until the next day.`}
-                checked={dailyRandomMusic}
-                onChange={(value: boolean) => {
-                  setGlobalState("dailyRandomMusic", value);
-                  python.setConfig({ daily_random_music: value });
-                  if (value) {
-                    // Start fresh: choose a pack that is different from the one playing now
-                    const choice = pickTodaysMusic(soundPacks, "", selectedMusic, setGlobalState);
-                    if (choice && choice.pick !== selectedMusic) restartMusicPlayer(choice.pick);
-                  }
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ToggleField
-                label="New Music Every Replay"
-                description="Every time the music starts again (when it ends, after a game closes, or after the Deck wakes up), it switches to a different music pack. Works together with New Music Every Day."
-                checked={replayRandomMusic}
-                onChange={(value: boolean) => {
-                  setGlobalState("replayRandomMusic", value);
-                  python.setConfig({ random_music_every_replay: value });
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ToggleField
-                label="Pure Random Music"
-                description="Turns off the variety rules. Music is picked completely at random, so a pack or series can come back soon. Only the music that is playing right now is skipped."
-                checked={pureRandomMusic}
-                onChange={(value: boolean) => {
-                  setGlobalState("pureRandomMusic", value);
-                  varietySettings.pureRandom = value;
-                  python.setConfig({ pure_random_music: value });
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ToggleField
-                label="Show Now Playing"
-                description="Shows a small message with the music pack's name and its credits whenever new music starts."
-                checked={showNowPlaying}
-                onChange={(value: boolean) => {
-                  nowPlayingSettings.enabled = value;
-                  setGlobalState("showNowPlaying", value);
-                  python.setConfig({ show_now_playing: value });
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ToggleField
-                label="Wait for Startup Movie"
-                description="When the Deck starts or wakes up, the music waits until the startup or wake-up movie has finished before it begins."
-                checked={waitForMovie}
-                onChange={(value: boolean) => {
-                  setGlobalState("waitForMovie", value);
-                  python.setConfig({ wait_for_startup_movie: value });
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <SliderField
-                bottomSeparator="standard"
-                label={undefined}
-                value={musicVolume}
-                min={0}
-                max={1}
-                step={0.01}
-                onChange={(value) => {
-                  setGlobalState("musicVolume", value);
-                  applyMusicVolume(menuMusic, value);
-                  // @ts-ignore
-                  window.AUDIOLOADER_MENUMUSIC.volume = value;
-                  const configObj = {
-                    selected_pack: activeSound,
-                    selected_music: selectedMusic,
-                    sound_volume: soundVolume,
-                    music_volume: value,
-                    legacy_enabled: legacyEnabled,
-                  };
-                  python.setConfig(configObj);
-                }}
-                icon={<FaMusic style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }} />}
-              />
-            </PanelSectionRow>
-          </>
-        )}
-      </PanelSection>
-      {legacyEnabled && (
-        <PanelSection title="Music Low-Pass Filter">
-          <PanelSectionRow>
-            <ToggleField
-              label="Steam Menu"
-              description="Muffles the music while the Steam menu (Steam button) is open."
-              checked={lowPassSteamMenu}
-              onChange={(value: boolean) => {
-                setGlobalState("lowPassSteamMenu", value);
-                configureMusicLowPass({
-                  steamMenu: value,
-                  quickAccess: lowPassQuickAccess,
-                  gameLoading: lowPassGameLoading,
-                  strength: lowPassStrength,
-                });
-                python.setConfig({ low_pass_steam_menu: value });
-              }}
-            />
-          </PanelSectionRow>
-          <PanelSectionRow>
-            <ToggleField
-              label="Quick Access Menu (...)"
-              description="Muffles the music while the Quick Access (...) menu is open."
-              checked={lowPassQuickAccess}
-              onChange={(value: boolean) => {
-                setGlobalState("lowPassQuickAccess", value);
-                configureMusicLowPass({
-                  steamMenu: lowPassSteamMenu,
-                  quickAccess: value,
-                  gameLoading: lowPassGameLoading,
-                  strength: lowPassStrength,
-                });
-                python.setConfig({ low_pass_quick_access: value });
-              }}
-            />
-          </PanelSectionRow>
-          <PanelSectionRow>
-            <ToggleField
-              label="Game Loading"
-              description="Muffles the music from the moment you press play on a game until the game has started."
-              checked={lowPassGameLoading}
-              onChange={(value: boolean) => {
-                setGlobalState("lowPassGameLoading", value);
-                configureMusicLowPass({
-                  steamMenu: lowPassSteamMenu,
-                  quickAccess: lowPassQuickAccess,
-                  gameLoading: value,
-                  strength: lowPassStrength,
-                });
-                python.setConfig({ low_pass_game_loading: value });
-              }}
-            />
-          </PanelSectionRow>
-          <PanelSectionRow>
-            <SliderField
-              bottomSeparator="standard"
-              label={`Filter Strength (${lowPassStrength}%)`}
-              description="Higher is more muffled. You hear the filter for a moment when you move this."
-              value={lowPassStrength}
-              min={0}
-              max={100}
-              step={1}
-              onChange={(value) => {
-                setGlobalState("lowPassStrength", value);
-                configureMusicLowPass({
-                  steamMenu: lowPassSteamMenu,
-                  quickAccess: lowPassQuickAccess,
-                  gameLoading: lowPassGameLoading,
-                  strength: value,
-                });
-                previewMusicLowPass();
-                python.setConfig({ low_pass_strength: value });
-              }}
-              icon={<FaMusic />}
-            />
-          </PanelSectionRow>
-        </PanelSection>
-      )}
-      <PanelSection title="Settings">
-        <PanelSectionRow>
-          <ButtonItem
-            bottomSeparator="none"
-            layout="below"
-            onClick={() => {
-              Router.CloseSideMenus();
-              Router.Navigate("/audiopack-manager");
-            }}
-          >
-            Manage Packs
-          </ButtonItem>
-        </PanelSectionRow>
-      </PanelSection>
-    </div>
-  );
-};
 
 const PackManagerRouter: VFC = () => {
   const { apiMeData, currentTab, setGlobalState } = useGlobalState();
@@ -566,6 +157,12 @@ export default definePlugin((serverApi: ServerAPI) => {
       // Since this isn't in a react component, this uses the getter function of the globalState instead of just the react variables
       // It does the same thing
       const { soundPacks, activeSound } = state.getPublicState();
+      // "Lower Music for Notifications"
+      try {
+        maybeDuckForSound(String(args[0]).split("/").pop() || "");
+      } catch {
+        // never let this get in the way of the sound
+      }
       let newSoundURL: string = "";
       switch (activeSound) {
         case "Default":
@@ -627,7 +224,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configDailyDate = data?.daily_music_date ?? "";
       const configDailyPick = data?.daily_music_pick ?? "";
       const configReplay = data?.random_music_every_replay ?? false;
-      const configPureRandom = data?.pure_random_music ?? false;
       const configWaitMovie = data?.wait_for_startup_movie ?? false;
       const configNormalize = data?.normalize_volume ?? false;
       const configNowPlaying = data?.show_now_playing ?? false;
@@ -647,8 +243,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("dailyMusicDate", configDailyDate);
       setGlobalState("dailyMusicPick", configDailyPick);
       setGlobalState("replayRandomMusic", configReplay);
-      setGlobalState("pureRandomMusic", configPureRandom);
-      varietySettings.pureRandom = configPureRandom;
       setGlobalState("waitForMovie", configWaitMovie);
       setGlobalState("normalizeVolume", configNormalize);
       setGlobalState("showNowPlaying", configNowPlaying);
@@ -665,6 +259,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       nowPlayingSettings.enabled = configNowPlaying;
       loadLoudnessCache(data?.loudness_cache);
       loadRecentMusic(data?.recent_music);
+      loadSettings(data);
       const loadedHistoryCount = Array.isArray(data?.recent_music) ? data.recent_music.length : 0;
       loudnessSettings.enabled = configNormalize;
       // Starts measuring the active sound pack when "Normalize Volume" is on
@@ -675,7 +270,13 @@ export default definePlugin((serverApi: ServerAPI) => {
       // With "New Music Every Day" on, today's music replaces the saved selection
       let musicToPlay = configSelectedMusic;
       let newDay = false;
-      if (configLegacyEnabled && configDailyRandom) {
+      // "Music by Time of Day" decides first, when it has a choice for this part of the day
+      const timePick = configLegacyEnabled ? timeOfDayPack(soundPacks) : null;
+      if (timePick) {
+        musicToPlay = timePick;
+        setGlobalState("selectedMusic", timePick);
+        python.setConfig({ selected_music: timePick });
+      } else if (configLegacyEnabled && configDailyRandom) {
         const choice = pickTodaysMusic(
           soundPacks,
           configDailyDate,
@@ -690,7 +291,7 @@ export default definePlugin((serverApi: ServerAPI) => {
 
       // With "New Music Every Replay" on, starting up counts as a replay too (the first music of
       // a new day still comes from "New Music Every Day")
-      if (configLegacyEnabled && configReplay && !newDay && musicToPlay !== "None") {
+      if (configLegacyEnabled && configReplay && !timePick && !newDay && musicToPlay !== "None") {
         const pick = pickReplayMusic(soundPacks, musicToPlay);
         if (pick) {
           musicToPlay = pick;
@@ -700,9 +301,9 @@ export default definePlugin((serverApi: ServerAPI) => {
       }
 
       // Written to the Decky log, so a repeat can be explained afterwards
-      python.logEvent(
+      note(
         `Startup music: saved="${configSelectedMusic}", legacy=${configLegacyEnabled}, daily=${configDailyRandom}, ` +
-          `newDay=${newDay}, everyReplay=${configReplay}, packs=${soundPacks.length}, ` +
+          `newDay=${newDay}, everyReplay=${configReplay}, timeOfDay=${timePick ?? "-"}, packs=${soundPacks.length}, ` +
           `history=${loadedHistoryCount}, chosen="${musicToPlay}"`
       );
 
@@ -747,9 +348,8 @@ export default definePlugin((serverApi: ServerAPI) => {
           // Because gamesRunning is in globalState, array methods like push and splice don't work
           setGlobalState("gamesRunning", [...gamesRunning, update.unAppID]);
           if (menuMusic != null) {
-            menuMusic.pause();
-            // menuMusic.currentTime = 0;
-            // setGlobalState("menuMusic", null);
+            // Fades out when "Smooth Fades" is on
+            pauseMusicSmooth(menuMusic);
           }
         } else {
           const filteredGames = gamesRunning.filter((e) => e !== update.unAppID);
@@ -758,11 +358,13 @@ export default definePlugin((serverApi: ServerAPI) => {
 
           // I'm re-using the filter here because I don't believe the getPublicState() method will update the values if they are changed
           if (filteredGames.length === 0) {
+            // A Sleep Timer pause ends when a game closes
+            if (menuMusicControl.pausedByLimit === "sleepTimer") endSleepTimerPause(state);
             // With "New Music Every Replay" on, coming back from a game starts different music
             if (playRandomMusic(state)) {
               // new music started
-            } else if (menuMusic !== null) {
-              menuMusic.play();
+            } else if (menuMusic !== null && menuMusicControl.pausedByLimit === null) {
+              Promise.resolve(resumeMusicSmooth(menuMusic)).catch(() => {});
             }
           }
         }
@@ -773,6 +375,8 @@ export default definePlugin((serverApi: ServerAPI) => {
   // (see audioPlayers/musicGuard.ts)
   const stopMusicGuard = startMusicGuard(state);
   const stopLowPassContextMonitor = startMusicLowPassContextMonitor();
+  // Battery Saver, Sleep Timer and "Soft Start for New Audio Device"
+  const stopMusicLimits = startMusicLimits(state);
 
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
     <GlobalStateContextProvider globalStateClass={state}>
@@ -790,7 +394,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     title: <div className={staticClasses.Title}>Audio Loader Encore</div>,
     content: (
       <GlobalStateContextProvider globalStateClass={state}>
-        <Content serverAPI={serverApi} />
+        <Content serverAPI={serverApi} state={state} />
       </GlobalStateContextProvider>
     ),
     icon: <RiFolderMusicFill />,
@@ -809,6 +413,8 @@ export default definePlugin((serverApi: ServerAPI) => {
       stopMusicGuard();
       stopLowPassContextMonitor();
       stopMusicLowPassAudio();
+      stopMusicLimits();
+      stopFx();
     },
   };
 });

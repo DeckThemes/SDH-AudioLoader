@@ -5,3 +5,6 @@ export * from "./movieWait";
 export * from "./nowPlaying";
 export * from "./musicGuard";
 export * from "./lowPass";
+export * from "./fade";
+export * from "./limits";
+export * from "./stats";

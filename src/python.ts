@@ -139,3 +139,11 @@ export function listPackFiles(packPath: string): Promise<any> {
 export function dummyFunction(): Promise<any> {
   return server!.callPluginMethod("dummy_function", {});
 }
+
+export function getPluginVersion(): Promise<any> {
+  return server!.callPluginMethod("get_plugin_version", {});
+}
+
+export function checkForUpdate(): Promise<any> {
+  return server!.callPluginMethod("check_for_update", {});
+}

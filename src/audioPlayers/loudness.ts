@@ -134,11 +134,16 @@ async function entryFor(
 // ---- music ----
 
 // Music volume with the gain applied. el.alVolume is the slider value, el.alGain the pack's gain.
+// musicFx.duck: a temporary volume factor shared by all music (0..1, see fade.ts).
+// el.alFade: the fade factor of one player (0..1, see fade.ts).
+export const musicFx = { duck: 1 };
+
 export function applyMusicVolume(el: any, volume: number) {
   if (!el) return;
   el.alVolume = volume;
   const gain = loudnessSettings.enabled && typeof el.alGain === "number" ? el.alGain : 1;
-  el.volume = Math.max(0, Math.min(1, volume * gain));
+  const fade = typeof el.alFade === "number" ? el.alFade : 1;
+  el.volume = Math.max(0, Math.min(1, volume * gain * fade * musicFx.duck));
 }
 
 // The gain of a music file that was measured before (1 if not, or if the option is off)

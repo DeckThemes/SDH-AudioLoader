@@ -1,11 +1,13 @@
 import { GlobalState } from "../state/GlobalState";
 import * as python from "../python";
 import { changeMenuMusic, menuMusicControl } from "./changeMenuMusic";
-import { pickReplayMusic, pickTodaysMusic } from "./dailyMusic";
+import { getTodayKey, pickReplayMusic, pickTodaysMusic, timeOfDayPack } from "./dailyMusic";
+import { endSleepTimerPause } from "./limits";
 import { waitForMovies } from "./movieWait";
+import { note } from "./stats";
 
 // Shown in the first on-screen message and in the settings, to tell which build is installed
-export const BUILD_TAG = "v1.2.8";
+export const BUILD_TAG = "v1.3.0";
 
 // Small on-screen messages that show what the music guard is doing. They are also written to the
 // Decky log. Set this to false once everything works.
@@ -58,12 +60,42 @@ export function playRandomMusic(state: GlobalState): boolean {
     return false;
   }
   if (!s.replayRandomMusic) return false;
-  const pick = pickReplayMusic(s.soundPacks, s.selectedMusic);
+  if (menuMusicControl.pausedByLimit !== null) return false;
+  // "Music by Time of Day" decides the music for this part of the day, when it has a choice
+  const timePick = timeOfDayPack(s.soundPacks);
+  const pick = timePick ?? pickReplayMusic(s.soundPacks, s.selectedMusic);
   if (!pick) return false;
-  python.logEvent(`New music for the replay: ${pick}`);
+  note(timePick ? `Music for the replay (time of day): ${pick}` : `New music for the replay: ${pick}`);
   // Remember what is playing now, so the next start (for example coming back from Desktop Mode)
   // picks something different from it
   python.setConfig({ selected_music: pick });
+  changeMenuMusic(
+    pick,
+    s.menuMusic,
+    state.setGlobalState.bind(state),
+    s.gamesRunning,
+    s.soundPacks,
+    s.musicVolume
+  );
+  return true;
+}
+
+// The "Skip" button: switches to a different music pack right now, whatever the replay toggle says.
+// Returns true if new music was started.
+export function skipMusic(state: GlobalState): boolean {
+  const s = state.getPublicState();
+  if (!s.legacyEnabled || s.gamesRunning.length > 0 || s.selectedMusic === "None") return false;
+  const pick = pickReplayMusic(s.soundPacks, s.selectedMusic);
+  if (!pick) return false;
+  note(`Skipped to: ${pick}`);
+  python.setConfig({ selected_music: pick });
+  // Like choosing the music by hand: with "New Music Every Day" on, it becomes today's music
+  if (s.dailyRandomMusic) {
+    const today = getTodayKey();
+    state.setGlobalState("dailyMusicDate", today);
+    state.setGlobalState("dailyMusicPick", pick);
+    python.setConfig({ daily_music_date: today, daily_music_pick: pick });
+  }
   changeMenuMusic(
     pick,
     s.menuMusic,
@@ -145,11 +177,26 @@ export async function restoreMusic(state: GlobalState, reason: Reason): Promise<
       say("Music not restarted: another plugin paused it on purpose.");
       return;
     }
+    // Waking up ends the Sleep Timer's pause. Battery Saver keeps the music paused.
+    if (reason === "wake" && menuMusicControl.pausedByLimit === "sleepTimer") {
+      endSleepTimerPause(state);
+      s = state.getPublicState();
+    }
+    if (menuMusicControl.pausedByLimit !== null) {
+      note("Music not restarted: Battery Saver paused it");
+      return;
+    }
 
     let musicToPlay = s.selectedMusic;
     // A new day after sleeping means a new pick for "New Music Every Day"
     let newDay = false;
-    if (reason === "wake" && s.dailyRandomMusic) {
+    const timePick = reason === "wake" ? timeOfDayPack(s.soundPacks) : null;
+    if (timePick) {
+      musicToPlay = timePick;
+      setGlobalState("selectedMusic", timePick);
+      python.setConfig({ selected_music: timePick });
+      note(`Music after waking (time of day): ${timePick}`);
+    } else if (reason === "wake" && s.dailyRandomMusic) {
       const choice = pickTodaysMusic(
         s.soundPacks,
         s.dailyMusicDate,
@@ -163,12 +210,13 @@ export async function restoreMusic(state: GlobalState, reason: Reason): Promise<
     }
     // "New Music Every Replay": waking up counts as a replay (the first music of a new day
     // still comes from "New Music Every Day")
-    if (reason === "wake" && s.replayRandomMusic && !newDay && musicToPlay !== "None") {
+    if (reason === "wake" && !timePick && s.replayRandomMusic && !newDay && musicToPlay !== "None") {
       const pick = pickReplayMusic(s.soundPacks, musicToPlay);
       if (pick) {
         musicToPlay = pick;
         setGlobalState("selectedMusic", pick);
         python.setConfig({ selected_music: pick });
+        note(`Music after waking (new music every replay): ${pick}`);
       }
     }
     if (musicToPlay === "None") {
@@ -273,6 +321,7 @@ export function startMusicGuard(state: GlobalState): () => void {
       s.selectedMusic !== "None" &&
       s.gamesRunning.length === 0 &&
       !menuMusicControl.pausedByOtherPlugin &&
+      menuMusicControl.pausedByLimit === null &&
       !menuMusicControl.waitingForMovie;
     if (busy || !shouldPlay) {
       resetWatch();

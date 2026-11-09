@@ -4,14 +4,17 @@ import { announceMusic } from "./nowPlaying";
 import { rememberMusic } from "./dailyMusic";
 import { applyMusicVolume, cachedMusicGain, loudnessSettings, normalizeMusic } from "./loudness";
 import { setMusicLowPassPlayer } from "./lowPass";
+import { fadeInMusic, fadeOutMusic, setFadePlayer } from "./fade";
 
 // Other plugins can pause the music through window.AUDIOLOADER_MENUMUSIC. The music guard must
 // not fight them, so a pause made that way is remembered here until play() is called again or
 // new music is started.
 // lastGameEventAt: when a game last started or stopped. Timers are slowed down while a game runs,
 // and the music guard must not mistake that for the Deck waking up from sleep.
+// pausedByLimit: the music was paused on purpose by Battery Saver or the Sleep Timer (limits.ts).
 export const menuMusicControl = {
   pausedByOtherPlugin: false,
+  pausedByLimit: null as null | "battery" | "sleepTimer",
   waitingForMovie: false,
   lastGameEventAt: 0,
 };
@@ -54,13 +57,20 @@ export function changeMenuMusic(
   musicVolume: number
 ) {
   menuMusicControl.pausedByOtherPlugin = false;
+  // Choosing or restarting music on purpose ends a Sleep Timer pause (Battery Saver stays)
+  if (menuMusicControl.pausedByLimit === "sleepTimer") menuMusicControl.pausedByLimit = null;
   setGlobalState("selectedMusic", newMusic);
 
-  // Stops the old music
+  // Stops the old music. With "Smooth Fades" on, it fades out while the new music fades in.
   if (menuMusic !== null) {
-    menuMusic.pause();
-    menuMusic.currentTime = 0;
+    const old = menuMusic;
     setGlobalState("menuMusic", null);
+    const stopOld = () => {
+      old.pause();
+      old.currentTime = 0;
+    };
+    if (!old.paused && !old.ended) fadeOutMusic(old, stopOld);
+    else stopOld();
   }
 
   // Start the new one, if the user selected a music at all
@@ -107,6 +117,8 @@ export function changeMenuMusic(
     // "Show Now Playing": tell which pack the music comes from
     announceMusic(currentPack);
     rememberMusic(currentPack?.name);
+    // "Smooth Fades": the new music rises from silence
+    fadeInMusic(newMenuMusic);
 
     // Measure this music (once) if it is not known yet, and fix its volume when that is done
     if (loudnessSettings.enabled && currentPack) {
@@ -144,6 +156,7 @@ export function changeMenuMusic(
         setVolume: setVolume.bind(this),
       };
       setMusicLowPassPlayer(menuMusic);
+      setFadePlayer(menuMusic);
       setGlobalState("menuMusic", menuMusic);
     }
   }
