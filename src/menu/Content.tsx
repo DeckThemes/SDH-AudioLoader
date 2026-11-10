@@ -266,6 +266,7 @@ const MusicTab: VFC<{ state: GlobalState }> = ({ state }) => {
     showNowPlaying,
     activeSound,
     soundVolume,
+    normalizeMusic,
     setGlobalState,
   } = g;
 
@@ -379,6 +380,20 @@ const MusicTab: VFC<{ state: GlobalState }> = ({ state }) => {
               saveBase({ music_volume: value });
             }}
           />
+          <Toggle
+            label="Normalize Music Volume"
+            description="Makes every music pack about equally loud, measured the way the ear hears it. Quiet music is boosted, loud music is turned down, and the loud parts inside a song are evened out a little. A song is measured the first time it plays, which takes a few seconds."
+            checked={normalizeMusic}
+            onChange={(value) => {
+              loudnessSettings.music = value;
+              setGlobalState("normalizeMusic", value);
+              python.setConfig({ normalize_music: value });
+              if (menuMusic) {
+                applyMusicVolume(menuMusic, musicVolume);
+                if (value) normalizeRunningMusic(menuMusic);
+              }
+            }}
+          />
 
           <Group id="music-rotation" title="Rotation">
             <Toggle
@@ -475,7 +490,7 @@ const MusicTab: VFC<{ state: GlobalState }> = ({ state }) => {
 };
 
 const SoundsTab: VFC = () => {
-  const { activeSound, soundPacks, soundVolume, musicVolume, selectedMusic, legacyEnabled, normalizeVolume, menuMusic, setGlobalState } =
+  const { activeSound, soundPacks, soundVolume, musicVolume, selectedMusic, legacyEnabled, normalizeSounds, setGlobalState } =
     useGlobalState();
   const options = useMemo(
     () => [
@@ -527,17 +542,13 @@ const SoundsTab: VFC = () => {
         }}
       />
       <Toggle
-        label="Normalize Volume"
-        description="Makes every sound pack and music pack about equally loud, so the volume sliders mean the same for all of them. A pack is measured the first time you use it, which takes a few seconds."
-        checked={normalizeVolume}
+        label="Normalize Sound Effect Volume"
+        description="Makes every sound pack about equally loud, measured the way the ear hears it, so the sound volume slider means the same for all of them. A limiter keeps boosted packs from distorting. A pack is measured the first time you use it, which takes a few seconds."
+        checked={normalizeSounds}
         onChange={(value) => {
-          loudnessSettings.enabled = value;
-          setGlobalState("normalizeVolume", value);
-          python.setConfig({ normalize_volume: value });
-          if (menuMusic) {
-            applyMusicVolume(menuMusic, musicVolume);
-            if (value) normalizeRunningMusic(menuMusic);
-          }
+          loudnessSettings.effects = value;
+          setGlobalState("normalizeSounds", value);
+          python.setConfig({ normalize_sounds: value });
           refreshEffectVolume();
         }}
       />
@@ -546,12 +557,16 @@ const SoundsTab: VFC = () => {
 };
 
 const EffectsTab: VFC = () => {
-  const { legacyEnabled, lowPassSteamMenu, lowPassQuickAccess, lowPassGameLoading, lowPassStrength, setGlobalState } = useGlobalState();
-  const apply = (patch: Partial<{ steamMenu: boolean; quickAccess: boolean; gameLoading: boolean; strength: number }>) =>
+  const { legacyEnabled, lowPassSteamMenu, lowPassQuickAccess, lowPassGameLoading, lowPassPopups, lowPassStrength, setGlobalState } =
+    useGlobalState();
+  const apply = (
+    patch: Partial<{ steamMenu: boolean; quickAccess: boolean; gameLoading: boolean; popups: boolean; strength: number }>
+  ) =>
     configureMusicLowPass({
       steamMenu: lowPassSteamMenu,
       quickAccess: lowPassQuickAccess,
       gameLoading: lowPassGameLoading,
+      popups: lowPassPopups,
       strength: lowPassStrength,
       ...patch,
     });
@@ -582,12 +597,22 @@ const EffectsTab: VFC = () => {
         />
         <Toggle
           label="Game Loading"
-          description="From the moment you press play on a game until the game has started."
+          description="From the moment you press play on a game until the game has started and the music has stopped."
           checked={lowPassGameLoading}
           onChange={(value) => {
             setGlobalState("lowPassGameLoading", value);
             apply({ gameLoading: value });
             python.setConfig({ low_pass_game_loading: value });
+          }}
+        />
+        <Toggle
+          label="Pop-ups and Notifications"
+          description="While a pop-up is open (like a confirmation box), and for a few seconds when a notification comes in."
+          checked={lowPassPopups}
+          onChange={(value) => {
+            setGlobalState("lowPassPopups", value);
+            apply({ popups: value });
+            python.setConfig({ low_pass_popups: value });
           }}
         />
         <Slider
@@ -724,8 +749,9 @@ const InfoTab: VFC<{ version: string }> = ({ version }) => {
         everyReplay: g.replayRandomMusic,
         nowPlaying: g.showNowPlaying,
         waitForMovie: g.waitForMovie,
-        normalize: g.normalizeVolume,
-        lowPass: [g.lowPassSteamMenu, g.lowPassQuickAccess, g.lowPassGameLoading, g.lowPassStrength],
+        normalizeMusic: g.normalizeMusic,
+        normalizeSounds: g.normalizeSounds,
+        lowPass: [g.lowPassSteamMenu, g.lowPassQuickAccess, g.lowPassGameLoading, g.lowPassPopups, g.lowPassStrength],
       },
       extra: { status: limitStatusText() },
     });

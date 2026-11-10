@@ -90,7 +90,7 @@ export function changeMenuMusic(
 
     let newMenuMusic: HTMLAudioElement;
 
-    // "Normalize Volume": the gain of this pack's music, if it was measured before
+    // "Normalize Music Volume": the gain of this pack's music, if it was measured before
     const musicGain = cachedMusicGain(currentPack?.truncatedPackPath, musicFileName);
 
     // If there is an intro, it must play that, and add an onended listener to change to the normal music
@@ -121,7 +121,7 @@ export function changeMenuMusic(
     fadeInMusic(newMenuMusic);
 
     // Measure this music (once) if it is not known yet, and fix its volume when that is done
-    if (loudnessSettings.enabled && currentPack) {
+    if (loudnessSettings.music && currentPack) {
       normalizeMusic(newMenuMusic, currentPack.truncatedPackPath, musicFileName);
     }
 

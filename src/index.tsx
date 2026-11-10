@@ -13,6 +13,7 @@ import { Permissions } from "./apiTypes";
 import {
   changeMenuMusic,
   effectVolumeFor,
+  EFFECT_LIMITER,
   endSleepTimerPause,
   ensureEffectGain,
   loadLoudnessCache,
@@ -22,6 +23,7 @@ import {
   note,
   nowPlayingSettings,
   loudnessSettings,
+  lowPassForSound,
   pauseMusicSmooth,
   pickReplayMusic,
   pickTodaysMusic,
@@ -134,10 +136,25 @@ export default definePlugin((serverApi: ServerAPI) => {
         const setGlobalState = state.setGlobalState.bind(state);
         const activePack = soundPacks.find((e) => e.name === activeSound);
         // @ts-ignore
-        const gainNode = new GainNode(this.context, {
+        const context: BaseAudioContext = this.context;
+        const gainNode = new GainNode(context, {
           gain: effectVolumeFor(soundVolume, activePack),
         });
-        gainNode.connect(await ret);
+        const destination = await ret;
+        // With "Normalize Sound Effect Volume" on, a limiter comes after the volume: a boosted sound
+        // pack must not distort. Below -1 dB it changes nothing.
+        let connected = false;
+        if (loudnessSettings.effects) {
+          try {
+            const limiter = new DynamicsCompressorNode(context, EFFECT_LIMITER);
+            gainNode.connect(limiter);
+            limiter.connect(destination);
+            connected = true;
+          } catch {
+            // the plain path below
+          }
+        }
+        if (!connected) gainNode.connect(destination);
         setGlobalState("gainNode", gainNode);
         return gainNode;
       } catch (e) {
@@ -160,7 +177,10 @@ export default definePlugin((serverApi: ServerAPI) => {
       const { soundPacks, activeSound } = state.getPublicState();
       // "Lower Music for Notifications"
       try {
-        maybeDuckForSound(String(args[0]).split("/").pop() || "");
+        const playedSound = String(args[0]).split("/").pop() || "";
+        maybeDuckForSound(playedSound);
+        // "Muffled Music" for pop-ups and notifications
+        lowPassForSound(playedSound);
       } catch {
         // never let this get in the way of the sound
       }
@@ -201,7 +221,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   );
   setGlobalState("soundPatchInstance", patchInstance);
 
-  // "Normalize Volume": puts the current sound volume (with the active pack's gain) on the gain node
+  // "Normalize Sound Effect Volume": puts the current sound volume (with the active pack's gain) on the gain node
   setEffectVolumeApplier(() => {
     const { gainNode, soundVolume, soundPacks, activeSound } = state.getPublicState();
     const activePack = soundPacks.find((e) => e.name === activeSound);
@@ -226,13 +246,17 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configDailyPick = data?.daily_music_pick ?? "";
       const configReplay = data?.random_music_every_replay ?? false;
       const configWaitMovie = data?.wait_for_startup_movie ?? false;
-      const configNormalize = data?.normalize_volume ?? false;
+      // Older builds (1.3.5 and before) had one "Normalize Volume" switch for both
+      const oldNormalize = data?.normalize_volume === true;
+      const configNormalizeMusic = data?.normalize_music ?? oldNormalize;
+      const configNormalizeSounds = data?.normalize_sounds ?? oldNormalize;
       const configNowPlaying = data?.show_now_playing ?? false;
       // Older builds (1.2.6) had a master switch and one menu toggle: keep what the user had chosen
       const oldLowPass = data?.low_pass_enabled === true;
       const configLowPassSteamMenu = data?.low_pass_steam_menu ?? (oldLowPass && data?.low_pass_steam_menus === true);
       const configLowPassQuickAccess = data?.low_pass_quick_access ?? (oldLowPass && data?.low_pass_steam_menus === true);
       const configLowPassGameLoading = data?.low_pass_game_loading ?? (oldLowPass && data?.low_pass_game_launching === true);
+      const configLowPassPopups = data?.low_pass_popups ?? false;
       const configLowPassStrength = data?.low_pass_strength ?? 50;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
@@ -245,16 +269,19 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("dailyMusicPick", configDailyPick);
       setGlobalState("replayRandomMusic", configReplay);
       setGlobalState("waitForMovie", configWaitMovie);
-      setGlobalState("normalizeVolume", configNormalize);
+      setGlobalState("normalizeMusic", configNormalizeMusic);
+      setGlobalState("normalizeSounds", configNormalizeSounds);
       setGlobalState("showNowPlaying", configNowPlaying);
       setGlobalState("lowPassSteamMenu", configLowPassSteamMenu);
       setGlobalState("lowPassQuickAccess", configLowPassQuickAccess);
       setGlobalState("lowPassGameLoading", configLowPassGameLoading);
+      setGlobalState("lowPassPopups", configLowPassPopups);
       setGlobalState("lowPassStrength", configLowPassStrength);
       configureMusicLowPass({
         steamMenu: configLowPassSteamMenu,
         quickAccess: configLowPassQuickAccess,
         gameLoading: configLowPassGameLoading,
+        popups: configLowPassPopups,
         strength: configLowPassStrength,
       });
       nowPlayingSettings.enabled = configNowPlaying;
@@ -262,8 +289,9 @@ export default definePlugin((serverApi: ServerAPI) => {
       loadRecentMusic(data?.recent_music);
       loadSettings(data);
       const loadedHistoryCount = Array.isArray(data?.recent_music) ? data.recent_music.length : 0;
-      loudnessSettings.enabled = configNormalize;
-      // Starts measuring the active sound pack when "Normalize Volume" is on
+      loudnessSettings.music = configNormalizeMusic;
+      loudnessSettings.effects = configNormalizeSounds;
+      // Starts measuring the active sound pack when "Normalize Sound Effect Volume" is on
       refreshEffectVolume();
 
       const { soundPacks } = state.getPublicState();

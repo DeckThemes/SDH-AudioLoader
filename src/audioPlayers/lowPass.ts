@@ -1,56 +1,99 @@
+import { findSP } from "decky-frontend-lib";
 import * as python from "../python";
+import { musicWantsGraph } from "./loudness";
+import {
+  allMusicGraphs,
+  glide,
+  MusicGraph,
+  onMusicGraphAttached,
+  openCutoff,
+  releaseOtherMusicGraphs,
+  requestMusicGraph,
+  resumeMusicContext,
+  stopMusicGraphs,
+} from "./musicGraph";
 
 // Music low-pass filter ("muffled music"): the menu music gets a low-pass filter while a Steam menu,
-// the Quick Access (...) menu is open, or while a game is loading. Only Encore's own menu music is
-// filtered. Steam's sound effects and the game's sound are not touched.
+// the Quick Access (...) menu or a pop-up (confirmation box, notification) is open, or while a game
+// is loading. Only Encore's own menu music is filtered. Steam's sound effects and the game's sound
+// are not touched. The filter lives in the music's Web Audio chain (musicGraph.ts).
 
 export interface MusicLowPassSettings {
   steamMenu: boolean;
   quickAccess: boolean;
   gameLoading: boolean;
+  popups: boolean;
   /** 0-100. 0 is almost no change (20 kHz), 100 is a strong filter (500 Hz). */
   strength: number;
 }
 
-type FilterContext = "steamMenu" | "quickAccess" | "gameLoading" | "preview";
-
-type AudioGraph = {
-  element: HTMLAudioElement;
-  context: AudioContext;
-  source: MediaElementAudioSourceNode;
-  filter: BiquadFilterNode;
-};
+type FilterContext = "steamMenu" | "quickAccess" | "gameLoading" | "popup" | "preview";
 
 const MIN_CUTOFF_HZ = 500;
 const MAX_CUTOFF_HZ = 20000;
-const TRANSITION_SECONDS = 0.08;
+// Filter moving in (a menu opened) and moving out (it closed), in seconds (about 5x this until done).
+// Opening up is slower: a sudden return of the high sounds is easy to hear.
+const CLOSE_SECONDS = 0.08;
+const OPEN_SECONDS = 0.25;
 const MENU_POLL_MS = 250;
 // Steam gives no sure "loading is over" signal on every version, so a loading state ends by itself
 const LOADING_FAILSAFE_MS = 5 * 60 * 1000;
+// When a game has loaded, the music is stopped right after. The filter stays on until the music is
+// paused (at most this long), so the music is not heard unfiltered for a moment before it stops.
+const LOADING_HOLD_MS = 4000;
 const PREVIEW_MS = 1500;
+// Pop-ups: Steam plays these sounds when a dialog opens and closes, and for notifications
+const POPUP_OPEN_SOUNDS = new Set(["deck_ui_show_modal.wav"]);
+const POPUP_CLOSE_SOUNDS = new Set(["deck_ui_hide_modal.wav"]);
+const NOTIFICATION_SOUNDS = new Set([
+  "deck_ui_toast.wav",
+  "deck_ui_message_toast.wav",
+  "deck_ui_achievement_toast.wav",
+  "steam_chatroom_notification.wav",
+]);
+const NOTIFICATION_MS = 3500;
+// A dialog that was opened (by its sound) but never closed ends by itself after this long
+const POPUP_FAILSAFE_MS = 2 * 60 * 1000;
+// When dialogs can be seen on the screen, a dialog that is gone this long counts as closed
+const POPUP_GONE_MS = 1200;
 // Values of Steam's SideMenu enum
 const SIDE_MENU_MAIN = 1;
 const SIDE_MENU_QUICK_ACCESS = 2;
 
-let settings: MusicLowPassSettings = { steamMenu: false, quickAccess: false, gameLoading: false, strength: 50 };
+let settings: MusicLowPassSettings = {
+  steamMenu: false,
+  quickAccess: false,
+  gameLoading: false,
+  popups: false,
+  strength: 50,
+};
 const activeContexts = new Set<FilterContext>();
 let currentElement: HTMLAudioElement | null = null;
-let graph: AudioGraph | null = null;
-let sharedAudioContext: AudioContext | null = null;
-let attaching = false;
-let unsupportedLogged = false;
-let graphErrorLogged = false;
 let previewTimer: ReturnType<typeof setTimeout> | null = null;
+let loadingHoldUntil = 0;
+let lastFiltered = false;
+// Pop-up state
+let popupOpenedAt = 0;
+let notificationUntil = 0;
+let dialogSeenEver = false;
+let dialogGoneSince = 0;
 
 function anyEnabled(): boolean {
-  return settings.steamMenu || settings.quickAccess || settings.gameLoading;
+  return settings.steamMenu || settings.quickAccess || settings.gameLoading || settings.popups;
+}
+
+function loadingHeld(): boolean {
+  return (
+    loadingHoldUntil > Date.now() && !!currentElement && !currentElement.paused && !currentElement.ended
+  );
 }
 
 export function shouldFilter(): boolean {
   return (
     (settings.steamMenu && activeContexts.has("steamMenu")) ||
     (settings.quickAccess && activeContexts.has("quickAccess")) ||
-    (settings.gameLoading && activeContexts.has("gameLoading")) ||
+    (settings.gameLoading && (activeContexts.has("gameLoading") || loadingHeld())) ||
+    (settings.popups && activeContexts.has("popup")) ||
     (anyEnabled() && activeContexts.has("preview"))
   );
 }
@@ -61,88 +104,21 @@ export function cutoffForStrength(strength: number): number {
   return MAX_CUTOFF_HZ * Math.pow(MIN_CUTOFF_HZ / MAX_CUTOFF_HZ, normalized);
 }
 
+function applyFilterTo(graph: MusicGraph, filtered: boolean): void {
+  const target = filtered ? Math.min(cutoffForStrength(settings.strength), openCutoff(graph.context)) : openCutoff(graph.context);
+  glide(graph, graph.filter.frequency, target, filtered ? CLOSE_SECONDS : OPEN_SECONDS);
+}
+
 function applyFilterTarget(): void {
-  if (!graph) return;
-  const now = graph.context.currentTime;
-  const nyquist = graph.context.sampleRate / 2;
-  const bypassCutoff = Math.min(MAX_CUTOFF_HZ, Math.max(1000, nyquist - 1));
-  const target = shouldFilter() ? cutoffForStrength(settings.strength) : bypassCutoff;
-  try {
-    graph.filter.frequency.cancelScheduledValues(now);
-    graph.filter.frequency.setTargetAtTime(target, now + 0.015, TRANSITION_SECONDS);
-  } catch (error) {
-    console.warn("Audio Loader: could not update the low-pass filter", error);
-  }
+  const filtered = shouldFilter();
+  lastFiltered = filtered;
+  for (const graph of allMusicGraphs()) applyFilterTo(graph, filtered);
 }
 
-function resumeContext(context: AudioContext): void {
-  if (context.state === "running" || context.state === "closed") return;
-  try {
-    Promise.resolve(context.resume()).catch(() => {});
-  } catch {
-    // tried again on the next check
-  }
-}
-
-// Connects the music player to the filter. This is only done when a filter is wanted. Once an
-// audio element is connected to Web Audio it cannot be disconnected from it again, so this
-// first makes sure the audio system is running: a stopped one would make the music silent.
-async function attachCurrentElement(): Promise<void> {
-  const element = currentElement;
-  if (!element || graph?.element === element || attaching) return;
-  const AudioContextConstructor = (window as any).AudioContext;
-  if (typeof AudioContextConstructor !== "function") {
-    if (!unsupportedLogged) {
-      unsupportedLogged = true;
-      python.logEvent("Low-pass filter: Web Audio is not available, the filter is off");
-    }
-    return;
-  }
-  attaching = true;
-  try {
-    const context: AudioContext = sharedAudioContext || new AudioContextConstructor();
-    sharedAudioContext = context;
-    if (context.state !== "running") {
-      try {
-        await context.resume();
-      } catch {
-        // checked right below
-      }
-    }
-    // Things may have changed while waiting
-    if (currentElement !== element || !shouldFilter()) return;
-    if (context.state !== "running") {
-      if (!graphErrorLogged) {
-        graphErrorLogged = true;
-        python.logEvent(`Low-pass filter: the audio system is "${context.state}", the filter is skipped for now`);
-      }
-      return;
-    }
-
-    const source = context.createMediaElementSource(element);
-    const filter = context.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.Q.value = 0.70710678;
-    source.connect(filter);
-    filter.connect(context.destination);
-    graph = { element, context, source, filter };
-    // Start open (no change to the sound), then move to the wanted cutoff smoothly
-    filter.frequency.value = Math.min(MAX_CUTOFF_HZ, Math.max(1000, context.sampleRate / 2 - 1));
-    applyFilterTarget();
-    python.logEvent("Low-pass filter: connected to the music player");
-  } catch (error) {
-    // Another plugin may already own this element. The normal sound path stays as it was.
-    if (!graphErrorLogged) {
-      graphErrorLogged = true;
-      python.logEvent(`Low-pass filter: could not connect to the music player: ${error}`);
-    }
-  } finally {
-    attaching = false;
-  }
-}
+onMusicGraphAttached((graph) => applyFilterTo(graph, shouldFilter()));
 
 function update(): void {
-  if (shouldFilter()) void attachCurrentElement();
+  if (shouldFilter() && currentElement) void requestMusicGraph(currentElement);
   applyFilterTarget();
 }
 
@@ -150,15 +126,18 @@ function setContext(context: FilterContext, active: boolean): void {
   if (active === activeContexts.has(context)) return;
   if (active) activeContexts.add(context);
   else activeContexts.delete(context);
+  // The music usually stops right after a game has loaded: keep the filter until it has
+  if (context === "gameLoading") loadingHoldUntil = active ? 0 : Date.now() + LOADING_HOLD_MS;
   update();
 }
 
 /** Applies the settings (when loading them, and whenever one is changed). */
-export function configureMusicLowPass(next: MusicLowPassSettings): void {
+export function configureMusicLowPass(next: Partial<MusicLowPassSettings>): void {
   settings = {
     steamMenu: !!next.steamMenu,
     quickAccess: !!next.quickAccess,
     gameLoading: !!next.gameLoading,
+    popups: !!next.popups,
     strength: Math.max(0, Math.min(100, Number(next.strength) || 0)),
   };
   update();
@@ -177,21 +156,65 @@ export function previewMusicLowPass(): void {
 
 /** Tells the filter which audio element is the menu music now. */
 export function setMusicLowPassPlayer(element: HTMLAudioElement | null): void {
-  if (currentElement === element) {
-    update();
+  if (currentElement !== element) {
+    currentElement = element;
+    releaseOtherMusicGraphs(element);
+  }
+  update();
+}
+
+/** Call with the name of every Steam sound effect that is about to play ("deck_ui_toast.wav"). */
+export function lowPassForSound(soundName: string): void {
+  if (POPUP_OPEN_SOUNDS.has(soundName)) {
+    popupOpenedAt = Date.now();
+    dialogGoneSince = 0;
+  } else if (POPUP_CLOSE_SOUNDS.has(soundName)) {
+    popupOpenedAt = 0;
+  } else if (NOTIFICATION_SOUNDS.has(soundName)) {
+    notificationUntil = Date.now() + NOTIFICATION_MS;
+  } else {
     return;
   }
-  if (graph) {
-    try {
-      graph.source.disconnect();
-      graph.filter.disconnect();
-    } catch {
-      // the old player may already be gone
-    }
-    graph = null;
+  checkPopups();
+}
+
+// Is a dialog (confirmation box and the like) shown in the Steam screen right now?
+function dialogOnScreen(): boolean {
+  const docs: Document[] = [];
+  try {
+    const sp = findSP?.();
+    if (sp?.document) docs.push(sp.document);
+  } catch {
+    // not available on this Steam version
   }
-  currentElement = element;
-  update();
+  if (typeof document !== "undefined" && !docs.includes(document)) docs.push(document);
+  for (const doc of docs) {
+    try {
+      const found = doc.querySelectorAll(".ModalPosition, .GenericConfirmDialog");
+      for (let i = 0; i < found.length; i++) {
+        const rect = (found[i] as HTMLElement).getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) return true;
+      }
+    } catch {
+      // try the next one
+    }
+  }
+  return false;
+}
+
+function checkPopups(): void {
+  const now = Date.now();
+  const onScreen = settings.popups ? dialogOnScreen() : false;
+  if (onScreen) {
+    dialogSeenEver = true;
+    dialogGoneSince = 0;
+  } else if (popupOpenedAt > 0) {
+    if (!dialogGoneSince) dialogGoneSince = now;
+    // A missed "closed" sound: dialogs can be seen on this Steam version, and this one is gone
+    if (dialogSeenEver && now - dialogGoneSince > POPUP_GONE_MS) popupOpenedAt = 0;
+  }
+  if (popupOpenedAt > 0 && now - popupOpenedAt > POPUP_FAILSAFE_MS) popupOpenedAt = 0;
+  setContext("popup", onScreen || popupOpenedAt > 0 || notificationUntil > now);
 }
 
 // Which Steam side menu is open: 0 none, 1 Steam menu, 2 Quick Access (...) menu. undefined = unknown.
@@ -209,8 +232,9 @@ export function readOpenSideMenu(): number | undefined {
 }
 
 /**
- * Starts watching the Steam menus and the game loading. Returns a function that stops it.
+ * Starts watching the Steam menus, pop-ups and the game loading. Returns a function that stops it.
  * - Steam menu / Quick Access menu: Steam's own menu store tells which side menu is open.
+ * - Pop-ups: the dialog sounds, notifications sounds and the dialogs on the screen.
  * - Game loading: from the moment Steam starts a game launch until the game is running.
  */
 export function startMusicLowPassContextMonitor(): () => void {
@@ -227,8 +251,13 @@ export function startMusicLowPassContextMonitor(): () => void {
     }
     setContext("steamMenu", open === SIDE_MENU_MAIN);
     setContext("quickAccess", open === SIDE_MENU_QUICK_ACCESS);
-    // A filtered player may have been stopped by the system (like after sleep): wake it up
-    if (graph) resumeContext(graph.context);
+    checkPopups();
+    // The hold after a game has loaded ends when the music stops (or after a while)
+    if (shouldFilter() !== lastFiltered) update();
+    // "Normalize Music Volume" may still be waiting for the music chain
+    if (currentElement && (lastFiltered || musicWantsGraph())) void requestMusicGraph(currentElement);
+    // A connected player may have been stopped by the system (like after sleep): wake it up
+    resumeMusicContext();
   };
   const menuTimer = setInterval(checkMenus, MENU_POLL_MS);
   checkMenus();
@@ -283,29 +312,16 @@ export function startMusicLowPassContextMonitor(): () => void {
     if (previewTimer) clearTimeout(previewTimer);
     previewTimer = null;
     activeContexts.clear();
+    loadingHoldUntil = 0;
+    popupOpenedAt = 0;
+    notificationUntil = 0;
     applyFilterTarget();
   };
 }
 
 /** Frees the audio resources when the plugin is unloaded. */
 export function stopMusicLowPassAudio(): void {
-  if (graph) {
-    try {
-      graph.source.disconnect();
-      graph.filter.disconnect();
-    } catch {
-      // already disconnected
-    }
-  }
-  if (sharedAudioContext) {
-    try {
-      Promise.resolve(sharedAudioContext.close()).catch(() => {});
-    } catch {
-      // nothing to do
-    }
-  }
-  graph = null;
-  sharedAudioContext = null;
+  stopMusicGraphs();
   currentElement = null;
   activeContexts.clear();
 }

@@ -1,5 +1,6 @@
 import { settings } from "../settings";
 import { applyMusicVolume, musicFx } from "./loudness";
+import { musicGraphFor } from "./musicGraph";
 
 // Smooth fades and "ducking" (a short volume dip) for the menu music.
 // Both work through factors on the player's volume (see applyMusicVolume), so they never fight
@@ -18,6 +19,9 @@ const DUCK_LEVEL = 0.35;
 const NOTIFICATION_HOLD_MS = 2200;
 const DEVICE_DUCK_LEVEL = 0.3;
 const DEVICE_HOLD_MS = 2500;
+// Without "Smooth Fades", a player in the music chain still gets a very short fade before it stops,
+// so it does not click or pop. The fade runs on the audio clock (see VOLUME_GLIDE in loudness.ts).
+const DECLICK_MS = 160;
 
 let currentPlayer: any = null;
 const fadeTimers = new WeakMap<object, ReturnType<typeof setInterval>>();
@@ -53,10 +57,29 @@ function rampFade(el: any, to: number, ms: number, done?: () => void) {
   fadeTimers.set(el, timer);
 }
 
+const declickTimers = new WeakMap<object, ReturnType<typeof setTimeout>>();
+
 function stopFade(el: any) {
   const old = fadeTimers.get(el);
   if (old) clearInterval(old);
   fadeTimers.delete(el);
+  const pending = declickTimers.get(el);
+  if (pending) clearTimeout(pending);
+  declickTimers.delete(el);
+}
+
+// The short fade before a stop. Returns false when the player is not in the music chain.
+function declick(el: any, done?: () => void): boolean {
+  if (!musicGraphFor(el)) return false;
+  stopFade(el);
+  el.alFade = 0;
+  reapply(el);
+  const timer = setTimeout(() => {
+    declickTimers.delete(el);
+    done?.();
+  }, DECLICK_MS);
+  declickTimers.set(el, timer);
+  return true;
 }
 
 /** A new player starts silent and rises to the normal volume (when "Smooth Fades" is on). */
@@ -73,14 +96,17 @@ export function fadeInMusic(el: any): void {
   rampFade(el, 1, FADE_IN_MS);
 }
 
-/** Lowers the player to silence, then calls done. Without "Smooth Fades" it calls done at once. */
+/**
+ * Lowers the player to silence, then calls done. Without "Smooth Fades" it only takes a moment
+ * (just long enough to avoid a click).
+ */
 export function fadeOutMusic(el: any, done?: () => void): void {
   if (!el) {
     done?.();
     return;
   }
   if (!settings.smooth_fades) {
-    done?.();
+    if (!declick(el, done)) done?.();
     return;
   }
   rampFade(el, 0, FADE_OUT_MS, done);
@@ -98,15 +124,16 @@ export function pauseMusicSmooth(el: any): void {
 export function resumeMusicSmooth(el: any): Promise<void> | void {
   if (!el) return;
   stopFade(el);
-  if (settings.smooth_fades) {
-    el.alFade = 0;
-    reapply(el);
-  } else {
+  // A player in the music chain starts silent and rises within a moment, so it does not click
+  const declicked = !settings.smooth_fades && !!musicGraphFor(el);
+  el.alFade = settings.smooth_fades || declicked ? 0 : 1;
+  reapply(el);
+  const result = el.play();
+  if (settings.smooth_fades) rampFade(el, 1, FADE_IN_MS);
+  else if (declicked) {
     el.alFade = 1;
     reapply(el);
   }
-  const result = el.play();
-  if (settings.smooth_fades) rampFade(el, 1, FADE_IN_MS);
   return result;
 }
 

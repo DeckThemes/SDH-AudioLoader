@@ -18,11 +18,16 @@ Encore adds new options to the "legacy" menu music of Audio Loader (turn on **En
 - **Battery Saver**: pauses the music when the battery is below a level you choose and the charger is not connected.
 - **Sleep Timer**: stops the music after the time you set. It comes back when the Deck wakes up, a game closes, or you press Resume.
 
+**Music tab** (below Music Volume)
+- **Normalize Music Volume**: makes every music pack about equally loud. Loudness is measured the way the ear hears it (LUFS, the method streaming services use): deep bass counts less, and silence or quiet intros are left out, so they do not make a song look quieter than it is. Quiet music is boosted (up to +20 dB, even past the normal maximum volume) and loud music is turned down (up to -30 dB). A gentle leveler also evens out the loud parts inside a song and keeps boosted music from distorting. Each song is measured the first time it plays (a few seconds; the result is saved).
+
 **Sounds tab**
-- **Normalize Volume**: makes every sound pack and music pack about equally loud, so the two volume sliders mean the same thing for all packs. Each pack is measured the first time it is used (a few seconds; the result is saved). Quiet packs are boosted and loud ones turned down, by at most about 18 dB. Steam's own default sounds are not changed. A boost cannot go past the maximum volume, so keep the music slider below 100% if you want quiet packs raised.
+- **Normalize Sound Effect Volume**: the same for sound packs, separate from the music. A limiter keeps boosted packs from distorting. Steam's own default sounds are not changed.
+
+Settings from older versions: if the single **Normalize Volume** switch was on, both new switches start on. Songs measured by older versions are measured again once with the new method.
 
 **Effects tab**
-- **Muffled Music (Low-Pass Filter)**: three separate toggles: **Steam Menu** (Steam button), **Quick Access Menu (...)**, and **Game Loading** (from pressing play until the game has started). While one is active, the menu music is smoothly muffled. A **Filter Strength** slider (0-100%) sets how muffled it is, and you hear the filter for a moment when you move it. Only Encore's menu music is filtered, not Steam's sound effects or the game.
+- **Muffled Music (Low-Pass Filter)**: four separate toggles: **Steam Menu** (Steam button), **Quick Access Menu (...)**, **Game Loading** (from pressing play until the game has started and the music has stopped), and **Pop-ups and Notifications** (while a pop-up such as a confirmation box is open, and for a few seconds when a notification comes in). While one is active, the menu music is smoothly muffled; it opens up again a bit more slowly, so the change is not abrupt. A **Filter Strength** slider (0-100%) sets how muffled it is, and you hear the filter for a moment when you move it. Only Encore's menu music is filtered, not Steam's sound effects or the game.
 
 **Library tab**
 - **Favorites and blocked packs**: favorites come up 3 times as often, blocked packs are never picked automatically (you can still choose them by hand).
@@ -36,10 +41,12 @@ Encore adds new options to the "legacy" menu music of Audio Loader (turn on **En
 
 The toggles can be used together. With "New Music Every Day" and "New Music Every Replay" both on, the first music of a new day is the daily pick, and later replays rotate to other packs. Priority at startup and after waking: Time of Day, then Daily, then Replay.
 
-The two menu toggles of the low-pass filter read which side menu Steam has open. The game loading toggle uses Steam's game launch events and ends when the game process starts.
+The two menu toggles of the low-pass filter read which side menu Steam has open. The game loading toggle uses Steam's game launch events; when the game process starts, the filter stays on until the music has stopped (at most 4 seconds), so the music is never heard unfiltered for a moment before it cuts. The pop-up toggle listens for Steam's "dialog opened/closed" and notification sounds and also looks for dialogs on the screen.
+
+**No more pops when the music stops**: while the music goes through Encore's audio chain (when Normalize Music Volume or a low-pass toggle is on), stopping or pausing it always takes a very short fade (about 0.15 s), even with Smooth Fades off, so it does not click.
 
 ## Honest status
-Encore is used and tested on one Steam Deck by its author, mainly the daily toggle, the sleep/wake fix and the new menu. Most other features were also checked with simulated players before release, so some of them may still behave differently on your Deck. Parts that depend on Steam's own events (menu detection for the low-pass filter, game loading, battery, new audio devices, notification sounds, the startup movie wait) are the most likely to need fixes. Version 1.3.1 fixed **Wait for Startup Movie**, which did not work in 1.3.0 (it is not confirmed on a real Deck yet), and 1.3.2 made the selected tab or group visible in the menu. If something does not work, please open an issue (if the Issues tab is not available yet, use the Discussions tab or contact the author), say which toggles you had on, and paste the **Copy Debug Info** text.
+Encore is used and tested on one Steam Deck by its author, mainly the daily toggle, the sleep/wake fix and the new menu. Most other features were also checked with simulated players before release, so some of them may still behave differently on your Deck. Parts that depend on Steam's own events (menu and pop-up detection for the low-pass filter, game loading, battery, new audio devices, notification sounds, the startup movie wait) are the most likely to need fixes. Version 1.3.1 fixed **Wait for Startup Movie**, which did not work in 1.3.0 (it is not confirmed on a real Deck yet), and 1.3.2 made the selected tab or group visible in the menu. If something does not work, please open an issue (if the Issues tab is not available yet, use the Discussions tab or contact the author), say which toggles you had on, and paste the **Copy Debug Info** text.
 
 ## Test checklist (for anyone trying Encore)
 1. Install, turn on **Enable Legacy Features**, pick a music pack. Music plays.
@@ -47,7 +54,7 @@ Encore is used and tested on one Steam Deck by its author, mainly the daily togg
 3. **Skip** (Now Playing card) switches to another pack.
 4. Turn on **New Music Every Replay**, start and close a game: different music plays afterwards.
 5. Put the Deck to sleep and wake it: the music comes back.
-6. **Effects** tab: turn on **Steam Menu**, press the Steam button: the music is muffled. Same for **Quick Access Menu (...)** and **Game Loading**.
+6. **Effects** tab: turn on **Steam Menu**, press the Steam button: the music is muffled. Same for **Quick Access Menu (...)**, **Game Loading** and **Pop-ups and Notifications** (for example the "exit game?" confirmation box).
 7. Turn on **Smooth Fades**: music fades in when it starts.
 8. **Sleep Timer**: start a short timer (5 min): the music stops, and comes back after a wake-up or **Resume Music**.
 9. Switch to Desktop Mode and back: the music should not be the same pack as before.

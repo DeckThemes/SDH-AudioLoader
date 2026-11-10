@@ -55,11 +55,13 @@ interface PublicGlobalState {
   dailyMusicPick: string;
   replayRandomMusic: boolean;
   waitForMovie: boolean;
-  normalizeVolume: boolean;
+  normalizeMusic: boolean;
+  normalizeSounds: boolean;
   showNowPlaying: boolean;
   lowPassSteamMenu: boolean;
   lowPassQuickAccess: boolean;
   lowPassGameLoading: boolean;
+  lowPassPopups: boolean;
   lowPassStrength: number;
   isInstalling: boolean;
 }
@@ -163,11 +165,13 @@ export class GlobalState {
   private dailyMusicPick: string = "";
   private replayRandomMusic: boolean = false;
   private waitForMovie: boolean = false;
-  private normalizeVolume: boolean = false;
+  private normalizeMusic: boolean = false;
+  private normalizeSounds: boolean = false;
   private showNowPlaying: boolean = false;
   private lowPassSteamMenu: boolean = false;
   private lowPassQuickAccess: boolean = false;
   private lowPassGameLoading: boolean = false;
+  private lowPassPopups: boolean = false;
   private lowPassStrength: number = 50;
   private browserPackList: packDbEntry[] = [];
   private searchFieldValue: string = "";
@@ -208,11 +212,13 @@ export class GlobalState {
       dailyMusicPick: this.dailyMusicPick,
       replayRandomMusic: this.replayRandomMusic,
       waitForMovie: this.waitForMovie,
-      normalizeVolume: this.normalizeVolume,
+      normalizeMusic: this.normalizeMusic,
+      normalizeSounds: this.normalizeSounds,
       showNowPlaying: this.showNowPlaying,
       lowPassSteamMenu: this.lowPassSteamMenu,
       lowPassQuickAccess: this.lowPassQuickAccess,
       lowPassGameLoading: this.lowPassGameLoading,
+      lowPassPopups: this.lowPassPopups,
       lowPassStrength: this.lowPassStrength,
       browserPackList: this.browserPackList,
       searchFieldValue: this.searchFieldValue,
