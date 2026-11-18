@@ -3,6 +3,7 @@ export interface Pack {
   description: string;
   ignore: DeckSound[];
   mappings: Mappings;
+  files?: { [soundNameWithoutExtension: string]: string[] };
   version: string;
   author: string;
   packPath: string; // This contains the full path from root to the pack
