@@ -5,7 +5,7 @@ from logging import getLogger
 
 sys.path.append(os.path.dirname(__file__))
 
-from audio_utils import store_read as util_store_read, store_write as util_store_write, get_steam_path, get_pack_path, AUDIO_LOADER_VERSION, DECKY_HOME, DECKY_USER_HOME
+from audio_utils import store_read as util_store_read, store_write as util_store_write, get_steam_path, get_pack_path, index_audio_files, AUDIO_LOADER_VERSION, DECKY_HOME, DECKY_USER_HOME
 from audio_remoteinstall import install
 
 starter_config_data = {
@@ -77,9 +77,11 @@ class Pack:
         self.packPath = packPath
         self.truncatedPackPath = truncatedPackPath
 
+        self.files = index_audio_files(packPath)
+
         self.has_intro = False
         if (self.music == True):
-            self.has_intro = "intro_music.mp3" in self.mappings or os.path.exists(os.path.join(packPath, "intro_music.mp3"))
+            self.has_intro = "intro_music" in self.files or any(os.path.splitext(k)[0] == "intro_music" for k in self.mappings)
 
     async def delete(self) -> Result:
         try:
@@ -97,6 +99,7 @@ class Pack:
             "author": self.author,
             "ignore": self.ignore,
             "mappings": self.mappings,
+            "files": self.files,
             "music": self.music,
             "hasIntro": self.has_intro,
             "packPath": self.packPath,
