@@ -20,6 +20,7 @@ import * as api from "./api";
 import { Permissions } from "./apiTypes";
 import { changeMenuMusic } from "./audioPlayers";
 import { AudioParent } from "./gamepadAudioFinder";
+import { isIgnored, resolvePackFile } from "./logic/resolveSound";
 import {
   ExpandedViewPage,
   PackBrowserPage,
@@ -360,20 +361,16 @@ export default definePlugin((serverApi: ServerAPI) => {
           const soundName = args[0].slice(8);
           const currentPack = soundPacks.find((e) => e.name === activeSound);
           // Ignore check
-          if (currentPack?.ignore.includes(soundName)) {
+          if (currentPack && isIgnored(currentPack, soundName)) {
             newSoundURL = args[0];
             break;
           }
           // Mapping check
-          if (Object.keys(currentPack?.mappings || {}).includes(soundName)) {
-            const mappings = currentPack?.mappings?.[soundName as keyof typeof currentPack.mappings] as string[] | undefined;
-            if (Array.isArray(mappings) && mappings.every(item => typeof item === 'string')) {
-              const randIndex = Math.trunc(Math.random() * mappings.length);
-              const mappedFileName = mappings[randIndex];
-              newSoundURL = `/sounds_custom/${currentPack?.truncatedPackPath || "/error"
-                }/${mappedFileName}`;
-              break;
-            }
+          const packFile = currentPack && resolvePackFile(currentPack, soundName);
+          if (packFile) {
+            newSoundURL = `/sounds_custom/${currentPack?.truncatedPackPath || "/error"
+              }/${packFile}`;
+            break;
           }
           // Default path-replacing behavior
           newSoundURL = args[0].replace(
