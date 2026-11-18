@@ -1,12 +1,8 @@
-import { Mappings, Pack } from "../classes";
+import { Pack } from "../classes";
+import { resolvePackFile } from "../logic/resolveSound";
 
-function findMapping(origFileName: string, mappings: Mappings | undefined): string {
-  if (mappings && Object.keys(mappings || {}).includes(origFileName)) {
-    const mappedFiles: string[] = mappings[origFileName as keyof Mappings];
-    const randIndex = Math.trunc(Math.random() * mappedFiles.length);
-    return mappedFiles[randIndex];
-  }
-  return origFileName;
+function findPackFile(origFileName: string, pack: Pack | undefined): string {
+  return (pack && resolvePackFile(pack, origFileName)) || origFileName;
 }
 
 function createFullPath(fileName: string, truncatedPackPath: string | undefined) {
@@ -35,11 +31,11 @@ export function changeMenuMusic(
     const currentPack = soundPacks.find((e) => e.name === newMusic);
 
     const musicFilePath = createFullPath(
-      findMapping("menu_music.mp3", currentPack?.mappings),
+      findPackFile("menu_music.mp3", currentPack),
       currentPack?.truncatedPackPath
     );
     const introFilePath = createFullPath(
-      findMapping("intro_music.mp3", currentPack?.mappings),
+      findPackFile("intro_music.mp3", currentPack),
       currentPack?.truncatedPackPath
     );
 
