@@ -11,9 +11,14 @@ from audio_remoteinstall import install
 starter_config_data = {
   "selected_pack": "Default",
   "selected_music": "None",
+  "selected_track": "",
   "sound_volume": 1,
   "music_volume": 0.5,
-  "legacy_enabled": False
+  "legacy_enabled": False,
+  "music_shuffle": False,
+  "music_repeat": "one",
+  "random_sound_on_launch": False,
+  "random_music_on_launch": False
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -137,7 +142,16 @@ class Plugin:
         Log("Audio Loader - Setting config file at {}".format(configPath))
         if (os.path.exists(configPath)):
             Log("Audio Loader - Found config file")
-            json_string = json.dumps(configObj)
+            # Merge into the existing config so keys the caller didn't send are never lost
+            merged = dict(starter_config_data)
+            try:
+                with open(configPath, "r") as fp:
+                    merged.update(json.load(fp))
+            except Exception as e:
+                Log("Audio Loader - Could not read existing config, rewriting it: {}".format(e))
+            merged.update(configObj)
+            self.config = merged
+            json_string = json.dumps(merged)
             with open(configPath, "w") as fp:
                 fp.write(json_string)
                 return True
@@ -225,13 +239,7 @@ class Plugin:
 
     async def _main(self):
         self.soundPacks = []
-        self.config = {
-            "selected_pack": "Default", 
-            "selected_music": "None",
-            "sound_volume": 1,
-            "music_volume": 0.5,
-            "legacy_enabled": False
-        }
+        self.config = dict(starter_config_data)
 
         Log("Initializing Audio Loader...")
         await self._load(self)
