@@ -9,7 +9,7 @@ export function isIgnored(pack: PackSoundInfo, soundName: string): boolean {
   return (pack.ignore || []).some((ignored) => soundStem(ignored) === stem);
 }
 
-function findMappedFiles(pack: PackSoundInfo, soundName: string): string[] | undefined {
+export function findMappedFiles(pack: PackSoundInfo, soundName: string): string[] | undefined {
   const mappings = (pack.mappings || {}) as Record<string, unknown>;
   const stem = soundStem(soundName);
   const key = Object.keys(mappings).find((k) => k === soundName) ?? Object.keys(mappings).find((k) => soundStem(k) === stem);
