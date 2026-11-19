@@ -37,6 +37,7 @@ import {
   pauseForGame,
   previousTrack,
   resumeAfterGame,
+  setGamepadUI,
   setMusicVolume,
   setShuffle,
   startCurrent,
@@ -63,7 +64,6 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const {
     activeSound,
     soundPacks,
-    legacyEnabled,
     selectedMusic,
     selectedTrack,
     currentTrack,
@@ -197,155 +197,135 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       />
       </PanelSectionRow>
       <PanelSectionRow>
-      <ToggleField
-      label="Enable Legacy Features"
-      description="Legacy features are unsupported by Audio Loader maintainers. They may break at any time. Issues should be reported on our GitHub. Please do not reach out to us on Discord regarding legacy feature issues."
-      checked={legacyEnabled}
-      onChange={(value: boolean) => {
-        setGlobalState("legacyEnabled", value);
-        saveConfig();
-        if (value) {
-          startCurrent();
-        } else {
-          stopMusic();
-        }
+      <DropdownItem
+      bottomSeparator="none"
+      onMenuWillOpen={() => refetchLocalPacks()}
+      menuLabel="Music Pack"
+      rgOptions={MusicPackDropdownOptions}
+      selectedOption={
+        MusicPackDropdownOptions.find((e) => e.label === selectedMusic)?.data ?? -1
+      }
+      onChange={async (option) => {
+        startPack(option.label as string);
       }}
       />
       </PanelSectionRow>
-      {legacyEnabled && (
-        <>
+      {selectedPackTracks.length > 1 && (
         <PanelSectionRow>
         <DropdownItem
         bottomSeparator="none"
-        onMenuWillOpen={() => refetchLocalPacks()}
-        menuLabel="Music Pack"
-        rgOptions={MusicPackDropdownOptions}
-        selectedOption={
-          MusicPackDropdownOptions.find((e) => e.label === selectedMusic)?.data ?? -1
-        }
+        menuLabel="Song"
+        rgOptions={selectedPackTracks.map((t, i) => ({ label: t.label, data: i }))}
+        selectedOption={Math.max(
+          0,
+          selectedPackTracks.findIndex((t) => t.file === selectedTrack)
+        )}
         onChange={async (option) => {
-          startPack(option.label as string);
+          startPack(selectedMusic, selectedPackTracks[option.data as number]?.file);
         }}
         />
         </PanelSectionRow>
-        {selectedPackTracks.length > 1 && (
-          <PanelSectionRow>
-          <DropdownItem
-          bottomSeparator="none"
-          menuLabel="Song"
-          rgOptions={selectedPackTracks.map((t, i) => ({ label: t.label, data: i }))}
-          selectedOption={Math.max(
-            0,
-            selectedPackTracks.findIndex((t) => t.file === selectedTrack)
-          )}
-          onChange={async (option) => {
-            startPack(selectedMusic, selectedPackTracks[option.data as number]?.file);
-          }}
-          />
-          </PanelSectionRow>
-        )}
-        <PanelSectionRow>
-        <div
-        style={{
-          fontSize: "0.85em",
-          opacity: 0.8,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-        >
-        {currentTrack
-          ? `${currentTrack.label}${
-            currentTrack.label !== currentTrack.pack ? ` — ${currentTrack.pack}` : ""
-          }`
-          : playerDisabled
-          ? "No music pack selected"
-          : "Stopped"}
-          </div>
-          </PanelSectionRow>
-          <PanelSectionRow>
-          <Focusable style={{ display: "flex", gap: "6px" }} flow-children="horizontal">
-          <DialogButton
-          disabled={playerDisabled}
-          style={playerButtonStyle()}
-          onClick={() => previousTrack()}
-          >
-          <FaStepBackward />
-          </DialogButton>
-          <DialogButton
-          disabled={playerDisabled}
-          style={playerButtonStyle()}
-          onClick={() => togglePlayPause()}
-          >
-          {musicPlaying ? <FaPause /> : <FaPlay />}
-          </DialogButton>
-          <DialogButton
-          disabled={playerDisabled}
-          style={playerButtonStyle()}
-          onClick={() => nextTrack()}
-          >
-          <FaStepForward />
-          </DialogButton>
-          <DialogButton
-          style={playerButtonStyle(musicShuffle ? ACCENT : undefined)}
-          onClick={() => setShuffle(!musicShuffle)}
-          >
-          <FaRandom />
-          </DialogButton>
-          <DialogButton
-          style={playerButtonStyle(musicRepeat !== "off" ? ACCENT : undefined)}
-          onClick={() => cycleRepeat()}
-          >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
-          <FaRedo />
-          {musicRepeat === "one" && (
-            <span style={{ fontSize: "1.3em", fontWeight: "bold", lineHeight: 1 }}>1</span>
-          )}
-          </span>
-          </DialogButton>
-          </Focusable>
-          </PanelSectionRow>
-          <PanelSectionRow>
-          <ToggleField
-          label="Random Music on Launch"
-          description="Starts a random song from your installed music packs each time Steam starts."
-          checked={randomMusicOnLaunch}
-          onChange={(value: boolean) => {
-            setGlobalState("randomMusicOnLaunch", value);
-            saveConfig();
-          }}
-          />
-          </PanelSectionRow>
-          <PanelSectionRow>
-          <SliderField
-          bottomSeparator="standard"
-          label={undefined}
-          value={musicVolume}
-          min={0}
-          max={1}
-          step={0.01}
-          onChange={(value) => setMusicVolume(value)}
-          icon={<FaMusic style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }} />}
-          />
-          </PanelSectionRow>
-          </>
       )}
-      </PanelSection>
-      <PanelSection title="Settings">
       <PanelSectionRow>
-      <ButtonItem
-      bottomSeparator="none"
-      layout="below"
-      onClick={() => {
-        Router.CloseSideMenus();
-        Router.Navigate("/audiopack-manager");
+      <div
+      style={{
+        fontSize: "0.85em",
+        opacity: 0.8,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
       }}
       >
-      Manage Packs
-      </ButtonItem>
-      </PanelSectionRow>
-      </PanelSection>
-      </div>
+      {currentTrack
+        ? `${currentTrack.label}${
+          currentTrack.label !== currentTrack.pack ? ` — ${currentTrack.pack}` : ""
+        }`
+        : playerDisabled
+        ? "No music pack selected"
+        : "Stopped"}
+        </div>
+        </PanelSectionRow>
+        <PanelSectionRow>
+        <Focusable style={{ display: "flex", gap: "6px" }} flow-children="horizontal">
+        <DialogButton
+        disabled={playerDisabled}
+        style={playerButtonStyle()}
+        onClick={() => previousTrack()}
+        >
+        <FaStepBackward />
+        </DialogButton>
+        <DialogButton
+        disabled={playerDisabled}
+        style={playerButtonStyle()}
+        onClick={() => togglePlayPause()}
+        >
+        {musicPlaying ? <FaPause /> : <FaPlay />}
+        </DialogButton>
+        <DialogButton
+        disabled={playerDisabled}
+        style={playerButtonStyle()}
+        onClick={() => nextTrack()}
+        >
+        <FaStepForward />
+        </DialogButton>
+        <DialogButton
+        style={playerButtonStyle(musicShuffle ? ACCENT : undefined)}
+        onClick={() => setShuffle(!musicShuffle)}
+        >
+        <FaRandom />
+        </DialogButton>
+        <DialogButton
+        style={playerButtonStyle(musicRepeat !== "off" ? ACCENT : undefined)}
+        onClick={() => cycleRepeat()}
+        >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+        <FaRedo />
+        {musicRepeat === "one" && (
+          <span style={{ fontSize: "1.3em", fontWeight: "bold", lineHeight: 1 }}>1</span>
+        )}
+        </span>
+        </DialogButton>
+        </Focusable>
+        </PanelSectionRow>
+        <PanelSectionRow>
+        <ToggleField
+        label="Random Music on Launch"
+        description="Starts a random song from your installed music packs each time Steam starts."
+        checked={randomMusicOnLaunch}
+        onChange={(value: boolean) => {
+          setGlobalState("randomMusicOnLaunch", value);
+          saveConfig();
+        }}
+        />
+        </PanelSectionRow>
+        <PanelSectionRow>
+        <SliderField
+        bottomSeparator="standard"
+        label={undefined}
+        value={musicVolume}
+        min={0}
+        max={1}
+        step={0.01}
+        onChange={(value) => setMusicVolume(value)}
+        icon={<FaMusic style={{ transform: "scale(0.8, 1) translate(-2px, -2px)" }} />}
+        />
+        </PanelSectionRow>
+        </PanelSection>
+        <PanelSection title="Settings">
+        <PanelSectionRow>
+        <ButtonItem
+        bottomSeparator="none"
+        layout="below"
+        onClick={() => {
+          Router.CloseSideMenus();
+          Router.Navigate("/audiopack-manager");
+        }}
+        >
+        Manage Packs
+        </ButtonItem>
+        </PanelSectionRow>
+        </PanelSection>
+        </div>
   );
 };
 
@@ -469,7 +449,8 @@ export default definePlugin((serverApi: ServerAPI) => {
           // Mapping check
           const packFile = currentPack && resolvePackFile(currentPack, soundName);
           if (packFile) {
-            newSoundURL = `/sounds_custom/${currentPack?.truncatedPackPath || "/error"
+            newSoundURL = `/sounds_custom/${
+              currentPack?.truncatedPackPath || "/error"
             }/${packFile}`;
             break;
           }
@@ -492,7 +473,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       const configSelectedMusic = data?.selected_music || "None";
       const configSoundVolume = data?.sound_volume ?? 1;
       const configMusicVolume = data?.music_volume ?? 0.5;
-      const configLegacyEnabled = data?.legacy_enabled ?? false;
       const configRepeat = data?.music_repeat;
 
       setGlobalState("activeSound", data?.selected_pack || "Default");
@@ -500,7 +480,6 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("selectedTrack", data?.selected_track ?? "");
       setGlobalState("soundVolume", configSoundVolume);
       setGlobalState("musicVolume", configMusicVolume);
-      setGlobalState("legacyEnabled", configLegacyEnabled);
       setGlobalState("musicShuffle", data?.music_shuffle ?? false);
       setGlobalState(
         "musicRepeat",
@@ -522,13 +501,10 @@ export default definePlugin((serverApi: ServerAPI) => {
         }
       }
 
-      // Music only plays if legacy features are enabled
-      if (configLegacyEnabled) {
-        if (randomMusicOnLaunch) {
-          startRandomMusic();
-        } else {
-          startCurrent();
-        }
+      if (randomMusicOnLaunch) {
+        startRandomMusic();
+      } else {
+        startCurrent();
       }
     });
   });
@@ -550,6 +526,11 @@ export default definePlugin((serverApi: ServerAPI) => {
       // Resumes unless the user paused the music themselves
       if (filteredGames.length === 0) resumeAfterGame();
     }
+  });
+
+  // EUIMode: 4 = Big Picture / Gaming Mode, 7 = desktop UI. Music only plays in the former.
+  const UIModeRegistrar = SteamClient.UI?.RegisterForUIModeChanged?.((mode: number) => {
+    setGamepadUI(mode === 4);
   });
 
   serverApi.routerHook.addRoute("/audiopack-manager", () => (
@@ -578,6 +559,7 @@ export default definePlugin((serverApi: ServerAPI) => {
       soundPatchInstance.unpatch();
       volumePatchInstance.unpatch();
       AppStateRegistrar.unregister();
+      UIModeRegistrar?.unregister();
     },
   };
 });
