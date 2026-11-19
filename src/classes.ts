@@ -69,3 +69,11 @@ export type Mappings =
       [Property in DeckSound]: string[];
     }
   | {};
+
+export type RepeatMode = "off" | "all" | "one";
+
+export interface Track {
+  pack: string; // Pack name
+  file: string; // File name inside the pack folder
+  label: string; // What the UI shows
+}
