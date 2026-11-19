@@ -18,7 +18,6 @@ export function saveConfig() {
     selected_track: s.selectedTrack,
     sound_volume: s.soundVolume,
     music_volume: s.musicVolume,
-    legacy_enabled: s.legacyEnabled,
     music_shuffle: s.musicShuffle,
     music_repeat: s.musicRepeat,
     random_sound_on_launch: s.randomSoundOnLaunch,
