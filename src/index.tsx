@@ -30,7 +30,7 @@ import { RiFolderMusicFill } from "react-icons/ri";
 import * as api from "./api";
 import { Permissions } from "./apiTypes";
 import {
-  cycleRepeat,
+  toggleRepeat,
   getPackTracks,
   initMusicPlayer,
   nextTrack,
@@ -275,15 +275,10 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
         <FaRandom />
         </DialogButton>
         <DialogButton
-        style={playerButtonStyle(musicRepeat !== "off" ? ACCENT : undefined)}
-        onClick={() => cycleRepeat()}
+        style={playerButtonStyle(musicRepeat === "one" ? ACCENT : undefined)}
+        onClick={() => toggleRepeat()}
         >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
         <FaRedo />
-        {musicRepeat === "one" && (
-          <span style={{ fontSize: "1.3em", fontWeight: "bold", lineHeight: 1 }}>1</span>
-        )}
-        </span>
         </DialogButton>
         </Focusable>
         </PanelSectionRow>
@@ -483,9 +478,8 @@ export default definePlugin((serverApi: ServerAPI) => {
       setGlobalState("musicShuffle", data?.music_shuffle ?? false);
       setGlobalState(
         "musicRepeat",
-        configRepeat === "off" || configRepeat === "all" || configRepeat === "one"
-        ? configRepeat
-        : "one"
+        // "all" was removed (the queue always wraps), so old configs map to "off"
+        configRepeat === "off" || configRepeat === "all" ? "off" : "one"
       );
       setGlobalState("randomSoundOnLaunch", data?.random_sound_on_launch ?? false);
       setGlobalState("randomMusicOnLaunch", data?.random_music_on_launch ?? false);
