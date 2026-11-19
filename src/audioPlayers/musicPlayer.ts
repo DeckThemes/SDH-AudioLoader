@@ -18,6 +18,7 @@ let gamepadUI = true;
 
 const HISTORY_LIMIT = 50;
 const RESTART_THRESHOLD_SECONDS = 3;
+const RETRY_DELAY_MS = 2000;
 
 export function initMusicPlayer(state: GlobalState) {
   gs = state;
@@ -140,6 +141,7 @@ function playTrack(track: Track, withIntro: boolean) {
   };
   // The only place the song is saved: once it has genuinely started, so a failed load can't overwrite it
   a.addEventListener("playing", () => saveConfig(), { once: true });
+  let retried = false;
   a.onended = () => {
     if (phase === "intro") {
       startMainPhase(a, mainSrc);
@@ -154,10 +156,20 @@ function playTrack(track: Track, withIntro: boolean) {
       startMainPhase(a, mainSrc);
       return;
     }
+    // The file may not be servable yet (e.g. right after boot): retry this song once before skipping it
+    if (!retried) {
+      retried = true;
+      setTimeout(() => {
+        if (audioEl() !== a) return;
+        a.load();
+        if (canPlay()) a.play().catch((e) => console.warn("Audio Loader: play() rejected", e));
+      }, RETRY_DELAY_MS);
+      return;
+    }
     errorStreak++;
     // Skip a broken song, but give up once every song in a row has failed
     if (errorStreak < getQueue().length) {
-      const next = pickNext(false);
+      const next = pickNext();
       if (next) {
         playTrack(next, packChanged(next));
         return;
@@ -184,22 +196,21 @@ function startMainPhase(a: HTMLAudioElement, mainSrc: string) {
 
 const packChanged = (next: Track) => st().currentTrack?.pack !== next.pack;
 
-// Picks the track that follows the current one. manual = the user pressed skip, so it always wraps.
-function pickNext(manual: boolean): Track | null {
+// Picks the track that follows the current one. The queue always wraps around.
+function pickNext(): Track | null {
   const queue = getQueue();
   if (queue.length === 0) return null;
 
   const cur = st().currentTrack;
   const curKey = cur ? keyOf(cur) : null;
-  const { musicShuffle, musicRepeat } = st();
+  const { musicShuffle } = st();
 
   if (musicShuffle) {
     const valid = new Set(queue.map(keyOf));
     if (bag !== null) bag = bag.filter((k) => valid.has(k));
 
     if (bag === null || bag.length === 0) {
-      // A finished cycle ends playback unless repeating or skipping manually (bag === null: no cycle yet)
-      if (bag !== null && !manual && musicRepeat === "off") return null;
+      // Cycle finished (or none yet): reshuffle, avoiding an immediate repeat of the current song
       const others = queue.map(keyOf).filter((k) => k !== curKey);
       bag = shuffled(others.length > 0 ? others : queue.map(keyOf));
     }
@@ -210,7 +221,7 @@ function pickNext(manual: boolean): Track | null {
   const idx = curKey ? queue.findIndex((t) => keyOf(t) === curKey) : -1;
   if (idx === -1) return queue[0];
   if (idx + 1 < queue.length) return queue[idx + 1];
-  return manual || musicRepeat !== "off" ? queue[0] : null;
+  return queue[0];
 }
 
 function handleEnded() {
@@ -223,9 +234,9 @@ function handleEnded() {
     }
     return;
   }
-  const next = pickNext(false);
+  const next = pickNext();
   if (!next) {
-    // End of the queue with repeat off
+    // Empty queue
     set("musicPlaying", false);
     return;
   }
@@ -289,7 +300,7 @@ export function stopMusic() {
 
 export function nextTrack() {
   if (!musicActive()) return;
-  const next = pickNext(true);
+  const next = pickNext();
   if (!next) return;
   rememberCurrent();
   playTrack(next, packChanged(next));
@@ -355,9 +366,8 @@ export function setRepeat(mode: RepeatMode) {
   saveConfig();
 }
 
-export function cycleRepeat() {
-  const order: RepeatMode[] = ["off", "all", "one"];
-  setRepeat(order[(order.indexOf(st().musicRepeat) + 1) % order.length]);
+export function toggleRepeat() {
+  setRepeat(st().musicRepeat === "one" ? "off" : "one");
 }
 
 export function setMusicVolume(value: number) {
