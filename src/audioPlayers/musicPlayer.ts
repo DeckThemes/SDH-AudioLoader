@@ -13,6 +13,8 @@ let userPaused = false;
 let bag: string[] | null = null;
 let history: string[] = [];
 let errorStreak = 0;
+// False while Steam is only open in its desktop UI (not Big Picture / Gaming Mode)
+let gamepadUI = true;
 
 const HISTORY_LIMIT = 50;
 const RESTART_THRESHOLD_SECONDS = 3;
@@ -25,6 +27,16 @@ const st = () => gs!.getPublicState();
 const set = (key: string, value: any) => gs!.setGlobalState(key, value);
 const keyOf = (t: Track) => `${t.pack}::${t.file}`;
 const audioEl = (): HTMLAudioElement | null => st().menuMusic;
+const canPlay = () => gamepadUI && st().gamesRunning.length === 0;
+
+// Pauses the music while Steam is in the desktop UI and resumes it when Big Picture / Gaming Mode returns
+export function setGamepadUI(active: boolean) {
+  gamepadUI = active;
+  const a = audioEl();
+  if (!a) return;
+  if (!active) a.pause();
+  else if (!userPaused && st().gamesRunning.length === 0) a.play().catch(() => {});
+}
 
 // ---------------------------------------------------------------- queue
 
@@ -38,10 +50,10 @@ export function getPackTracks(pack: Pack): Track[] {
     const candidates = pack.files?.["menu_music"];
     files = [
       candidates && candidates.length > 0
-        ? candidates.includes("menu_music.mp3")
-          ? "menu_music.mp3"
-          : candidates[0]
-        : "menu_music.mp3",
+      ? candidates.includes("menu_music.mp3")
+      ? "menu_music.mp3"
+      : candidates[0]
+      : "menu_music.mp3",
     ];
   }
   return files.map((file) => ({
@@ -54,14 +66,14 @@ export function getPackTracks(pack: Pack): Track[] {
 // The player queue is every song of every installed music pack, ordered by pack name.
 export function getQueue(): Track[] {
   return st()
-    .soundPacks.filter((p) => p.music)
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .flatMap(getPackTracks);
+  .soundPacks.filter((p) => p.music)
+  .slice()
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .flatMap(getPackTracks);
 }
 
 const trackPath = (pack: Pack, file: string) =>
-  `/sounds_custom/${pack.truncatedPackPath || "error"}/${file}`;
+`/sounds_custom/${pack.truncatedPackPath || "error"}/${file}`;
 
 function shuffled<T>(items: T[]): T[] {
   const a = items.slice();
@@ -157,7 +169,7 @@ function playTrack(track: Track, withIntro: boolean) {
   exposeWindowObject(a);
 
   // While a game is running the music stays loaded but paused; resumeAfterGame() starts it.
-  if (st().gamesRunning.length === 0) {
+  if (canPlay()) {
     a.play().catch((e) => console.warn("Audio Loader: play() rejected", e));
   }
 }
@@ -227,7 +239,7 @@ function rememberCurrent() {
   if (history.length > HISTORY_LIMIT) history.shift();
 }
 
-const musicActive = () => st().legacyEnabled && st().selectedMusic !== "None";
+const musicActive = () => st().selectedMusic !== "None";
 
 // ---------------------------------------------------------------- public controls
 
@@ -252,7 +264,7 @@ export function startPack(packName: string, trackFile?: string) {
   playTrack(track, true);
 }
 
-// Resumes whatever pack/song is saved in settings (used at boot and when legacy features turn on)
+// Resumes whatever pack/song is saved in settings (used at boot)
 export function startCurrent() {
   if (!musicActive()) return;
   startPack(st().selectedMusic, st().selectedTrack);
@@ -260,7 +272,6 @@ export function startCurrent() {
 
 // Starts a random song from every installed music pack
 export function startRandomMusic() {
-  if (!st().legacyEnabled) return;
   const queue = getQueue();
   if (queue.length === 0) return;
   history = [];
@@ -268,7 +279,7 @@ export function startRandomMusic() {
   playTrack(queue[Math.floor(Math.random() * queue.length)], true);
 }
 
-// Stops playback but keeps the saved selection, so turning legacy features back on resumes it
+// Stops playback but keeps the saved selection
 export function stopMusic() {
   disposeAudio();
   set("currentTrack", null);
@@ -323,7 +334,7 @@ export function togglePlayPause() {
   }
   if (a.paused) {
     userPaused = false;
-    if (st().gamesRunning.length === 0) a.play().catch(() => {});
+    if (canPlay()) a.play().catch(() => {});
   } else {
     userPaused = true;
     a.pause();
@@ -361,5 +372,5 @@ export function pauseForGame() {
 
 export function resumeAfterGame() {
   const a = audioEl();
-  if (a && !userPaused) a.play().catch(() => {});
+  if (a && !userPaused && gamepadUI) a.play().catch(() => {});
 }
