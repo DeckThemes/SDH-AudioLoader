@@ -1,10 +1,5 @@
 ### Summary
-Turns the single looping menu music into a real, first-class music player, and makes the settings and sound resolution more robust. `changeMenuMusic.ts` is replaced by a new `musicPlayer.ts` that owns the queue, playback state and game pause/resume. Music no longer sits behind the "Enable Legacy Features" toggle, which is removed. This also fixes the long-standing bug where music kept playing while Steam was only open in the desktop UI. Default behavior is otherwise unchanged: repeat defaults to "one", so the menu music loops as before.
-
-### Bug fix: music playing in the desktop UI
-- Music kept playing when Steam was only open in the desktop UI, outside Big Picture / Gaming Mode.
-- The player now listens for Steam's UI mode changes (`SteamClient.UI.RegisterForUIModeChanged`). Music only plays in Big Picture / Gaming Mode, pauses in the desktop UI, and resumes when you return, unless you paused it yourself.
-- If that API is unavailable, the player falls back to the previous behavior, so nothing changes on a Steam Deck in Gaming Mode.
+Turns the single looping menu music into a real, first-class music player, and makes the settings and sound resolution more robust. `changeMenuMusic.ts` is replaced by a new `musicPlayer.ts` that owns the queue, playback state and game pause/resume. Music no longer sits behind the "Enable Legacy Features" toggle, which is removed. Default behavior is otherwise unchanged: repeat defaults to "one", so the menu music loops as before.
 
 ### Music player
 - **Controls in the Quick Access Menu:** Previous, Play/Pause and Next buttons, a now-playing line, and shuffle and repeat toggles.
@@ -16,6 +11,7 @@ Turns the single looping menu music into a real, first-class music player, and m
 - **Intros:** `intro_music` plays before the first song, or when skip moves into a new pack.
 - **Error handling:** a missing intro or broken song is skipped instead of stopping playback. Playback gives up only after every song in a row has failed.
 - **Games:** music pauses while a game runs and resumes afterwards, unless the user paused it themselves.
+- **Desktop UI:** music only plays in Big Picture / Gaming Mode. It pauses while Steam is open in the desktop UI and resumes when you return.
 
 ### Legacy toggle removed
 - The "Enable Legacy Features" toggle and its `legacy_enabled` config key are removed. The music controls are always shown, and music plays whenever a music pack is selected.
@@ -56,8 +52,7 @@ The README is rewritten with:
 ### Testing
 - [ ] Verify on a Deck or other Decky install: skip, previous, shuffle and repeat modes
 - [ ] Verify game pause/resume, and that a manual pause survives closing a game
-- [ ] Verify music pauses when Steam is in the desktop UI and resumes in Big Picture / Gaming Mode
-- [ ] Verify music doesn't start at boot when Steam launches into the desktop UI
+- [ ] Verify music pauses in the desktop UI and resumes in Big Picture / Gaming Mode
 - [ ] Verify settings survive a Steam restart
 - [ ] Verify packs with mixed formats and intros
 - [ ] Verify the manual build and install steps on regular Linux and on a Steam Deck
