@@ -7,7 +7,7 @@ import {
   ThemeQueryRequest,
   PartialCSSThemeInfo,
 } from "../apiTypes";
-import { Pack, packDbEntry } from "../classes";
+import { Pack, packDbEntry, RepeatMode, Track } from "../classes";
 
 interface PublicGlobalState {
   // API
@@ -51,6 +51,15 @@ interface PublicGlobalState {
   soundPacks: Pack[];
   selectedMusic: string;
   isInstalling: boolean;
+
+  // Music player
+  selectedTrack: string;
+  currentTrack: Track | null;
+  musicPlaying: boolean;
+  musicShuffle: boolean;
+  musicRepeat: RepeatMode;
+  randomSoundOnLaunch: boolean;
+  randomMusicOnLaunch: boolean;
 }
 
 // The localThemeEntry interface refers to the theme data as given by the python function, the Theme class refers to a theme after it has been formatted and the generate function has been added
@@ -156,6 +165,16 @@ export class GlobalState {
   };
   private isInstalling: boolean = false;
 
+  // Music player
+  private selectedTrack: string = "";
+  private currentTrack: Track | null = null;
+  private musicPlaying: boolean = false;
+  private musicShuffle: boolean = false;
+  // "one" matches the original behaviour (the menu music loops)
+  private musicRepeat: RepeatMode = "one";
+  private randomSoundOnLaunch: boolean = false;
+  private randomMusicOnLaunch: boolean = false;
+
   // You can listen to this eventBus' 'stateUpdate' event and use that to trigger a useState or other function that causes a re-render
   public eventBus = new EventTarget();
 
@@ -186,6 +205,13 @@ export class GlobalState {
       selectedSort: this.selectedSort,
       selectedTarget: this.selectedTarget,
       isInstalling: this.isInstalling,
+      selectedTrack: this.selectedTrack,
+      currentTrack: this.currentTrack,
+      musicPlaying: this.musicPlaying,
+      musicShuffle: this.musicShuffle,
+      musicRepeat: this.musicRepeat,
+      randomSoundOnLaunch: this.randomSoundOnLaunch,
+      randomMusicOnLaunch: this.randomMusicOnLaunch,
 
       // Browse Page
       themeSearchOpts: this.themeSearchOpts,
