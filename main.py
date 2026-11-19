@@ -5,15 +5,19 @@ from logging import getLogger
 
 sys.path.append(os.path.dirname(__file__))
 
-from audio_utils import store_read as util_store_read, store_write as util_store_write, get_steam_path, get_pack_path, AUDIO_LOADER_VERSION, DECKY_HOME, DECKY_USER_HOME
+from audio_utils import store_read as util_store_read, store_write as util_store_write, get_steam_path, get_pack_path, index_audio_files, AUDIO_LOADER_VERSION, DECKY_HOME, DECKY_USER_HOME
 from audio_remoteinstall import install
 
 starter_config_data = {
   "selected_pack": "Default",
   "selected_music": "None",
+  "selected_track": "",
   "sound_volume": 1,
   "music_volume": 0.5,
-  "legacy_enabled": False
+  "music_shuffle": False,
+  "music_repeat": "one",
+  "random_sound_on_launch": False,
+  "random_music_on_launch": False
 }
 starter_config_string = json.dumps(starter_config_data)
 
@@ -50,7 +54,7 @@ class Result:
 
         if not self.success:
             Log(f"Result failed! {message}")
-    
+
     def raise_on_failure(self):
         if not self.success:
             raise Exception(self.message)
@@ -69,17 +73,19 @@ class Pack:
         self.mappings = json["mappings"] if ("mappings" in json) else {}
         self.music = bool(json["music"]) if ("music" in json) else False
         self.id = json["id"] if ("id" in json) else self.name
-        
+
 
         if (AUDIO_LOADER_VERSION < self.require):
             raise Exception("Audio Loader - {} requires Audio Loader version {} but only version {} is installed".format(self.name, self.require, AUDIO_LOADER_VERSION))
-        
+
         self.packPath = packPath
         self.truncatedPackPath = truncatedPackPath
 
+        self.files = index_audio_files(packPath)
+
         self.has_intro = False
         if (self.music == True):
-            self.has_intro = "intro_music.mp3" in self.mappings or os.path.exists(os.path.join(packPath, "intro_music.mp3"))
+            self.has_intro = "intro_music" in self.files or any(os.path.splitext(k)[0] == "intro_music" for k in self.mappings)
 
     async def delete(self) -> Result:
         try:
@@ -97,6 +103,7 @@ class Pack:
             "author": self.author,
             "ignore": self.ignore,
             "mappings": self.mappings,
+            "files": self.files,
             "music": self.music,
             "hasIntro": self.has_intro,
             "packPath": self.packPath,
@@ -134,7 +141,16 @@ class Plugin:
         Log("Audio Loader - Setting config file at {}".format(configPath))
         if (os.path.exists(configPath)):
             Log("Audio Loader - Found config file")
-            json_string = json.dumps(configObj)
+            # Merge into the existing config so keys the caller didn't send are never lost
+            merged = dict(starter_config_data)
+            try:
+                with open(configPath, "r") as fp:
+                    merged.update(json.load(fp))
+            except Exception as e:
+                Log("Audio Loader - Could not read existing config, rewriting it: {}".format(e))
+            merged.update(configObj)
+            self.config = merged
+            json_string = json.dumps(merged)
             with open(configPath, "w") as fp:
                 fp.write(json_string)
                 return True
@@ -149,14 +165,14 @@ class Plugin:
             if x.name == name:
                 pack = x
                 break
-        
+
         if (pack == None):
             return Result(False, f"Could not find {name}")
-        
+
         result = await pack.delete()
         if not result.success:
             return result.to_dict()
-        
+
         self.soundPacks.remove(pack)
         return Result(True).to_dict()
 
@@ -180,7 +196,7 @@ class Plugin:
             try:
                 with open(packDataPath, "r") as f:
                     pack = json.load(f)
-                
+
                 packData = Pack(packPath, pack, p)
 
                 if (packData.name not in [p.name for p in self.soundPacks]):
@@ -191,14 +207,14 @@ class Plugin:
 
     async def store_read(self, key : str) -> str:
         return util_store_read(key)
-    
+
     async def store_write(self, key : str, val : str) -> dict:
         util_store_write(key, val)
         return Result(True).to_dict()
 
     async def _load(self):
         packsPath = get_pack_path()
-        
+
         configPath = os.path.join(get_pack_path(), 'config.json')
 
         Log("Audio Loader - Finding sound packs...")
@@ -216,19 +232,13 @@ class Plugin:
         await self.parse_packs(self)
         await self.get_config(self)
 
-        
+
         Log("Audio Loader - Config existing is {}".format(os.path.exists(configPath)))
 
 
     async def _main(self):
         self.soundPacks = []
-        self.config = {
-            "selected_pack": "Default", 
-            "selected_music": "None",
-            "sound_volume": 1,
-            "music_volume": 0.5,
-            "legacy_enabled": False
-        }
+        self.config = dict(starter_config_data)
 
         Log("Initializing Audio Loader...")
         await self._load(self)

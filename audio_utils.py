@@ -12,8 +12,29 @@ DECKY_HOME = os.environ["DECKY_HOME"] # /home/user/homebrew
 DECKY_USER_HOME = os.environ["DECKY_USER_HOME"] # /home/user
 DECKY_USER = os.getenv("DECKY_USER")
 
+AUDIO_EXTENSIONS = (".wav", ".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".flac", ".webm", ".weba")
+
 def Log(text : str):
     Logger.info(f"[AUDIO_LOADER] {text}")
+
+def index_audio_files(pack_path : str) -> dict:
+    index = {}
+    try:
+        names = os.listdir(pack_path)
+    except OSError:
+        return index
+
+    for name in names:
+        stem, ext = os.path.splitext(name)
+        ext = ext.lower()
+        if ext not in AUDIO_EXTENSIONS or not os.path.isfile(os.path.join(pack_path, name)):
+            continue
+        index.setdefault(stem, []).append(name)
+
+    for stem in index:
+        index[stem].sort(key=lambda n: (AUDIO_EXTENSIONS.index(os.path.splitext(n)[1].lower()), n))
+
+    return index
 
 def get_user_home() -> str:
     return HOME

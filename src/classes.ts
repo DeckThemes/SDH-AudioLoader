@@ -3,6 +3,7 @@ export interface Pack {
   description: string;
   ignore: DeckSound[];
   mappings: Mappings;
+  files?: { [soundNameWithoutExtension: string]: string[] };
   version: string;
   author: string;
   packPath: string; // This contains the full path from root to the pack
@@ -68,3 +69,12 @@ export type Mappings =
       [Property in DeckSound]: string[];
     }
   | {};
+
+// "one" loops the current song; "off" plays on and wraps around the queue
+export type RepeatMode = "off" | "one";
+
+export interface Track {
+  pack: string; // Pack name
+  file: string; // File name inside the pack folder
+  label: string; // What the UI shows
+}

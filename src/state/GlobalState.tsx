@@ -7,7 +7,7 @@ import {
   ThemeQueryRequest,
   PartialCSSThemeInfo,
 } from "../apiTypes";
-import { Pack, packDbEntry } from "../classes";
+import { Pack, packDbEntry, RepeatMode, Track } from "../classes";
 
 interface PublicGlobalState {
   // API
@@ -39,7 +39,6 @@ interface PublicGlobalState {
   currentExpandedTheme: PartialCSSThemeInfo | undefined;
 
   dummyFuncResult: boolean;
-  legacyEnabled: boolean;
   menuMusic: any;
   soundPatchInstance: any;
   volumePatchInstance: any;
@@ -51,6 +50,15 @@ interface PublicGlobalState {
   soundPacks: Pack[];
   selectedMusic: string;
   isInstalling: boolean;
+
+  // Music player
+  selectedTrack: string;
+  currentTrack: Track | null;
+  musicPlaying: boolean;
+  musicShuffle: boolean;
+  musicRepeat: RepeatMode;
+  randomSoundOnLaunch: boolean;
+  randomMusicOnLaunch: boolean;
 }
 
 // The localThemeEntry interface refers to the theme data as given by the python function, the Theme class refers to a theme after it has been formatted and the generate function has been added
@@ -64,161 +72,176 @@ interface PublicGlobalStateContext extends PublicGlobalState {
 export class GlobalState {
   // Api
   private apiUrl: string = "https://api.deckthemes.com";
-  private apiShortToken: string = "";
-  private apiFullToken: string = "";
-  private apiTokenExpireDate: Date | number | undefined = undefined;
-  private apiMeData: AccountData | undefined = undefined;
+    private apiShortToken: string = "";
+    private apiFullToken: string = "";
+    private apiTokenExpireDate: Date | number | undefined = undefined;
+    private apiMeData: AccountData | undefined = undefined;
 
-  private currentTab: string = "";
-  private currentExpandedTheme: PartialCSSThemeInfo | undefined = undefined;
+    private currentTab: string = "";
+    private currentExpandedTheme: PartialCSSThemeInfo | undefined = undefined;
 
-  // Browse Tab
-  private browseThemeList: ThemeQueryResponse = { total: 0, items: [] };
-  private prevSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private serverFilters: FilterQueryResponse = {
-    filters: ["All"],
-    order: ["Last Updated"],
-  };
-  private themeSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-
-  // Stars
-  private prevStarSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private starredSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private starredServerFilters: FilterQueryResponse = {
-    filters: ["All"],
-    order: ["Last Updated"],
-  };
-  private starredThemeList: ThemeQueryResponse = { total: 0, items: [] };
-
-  // Submissions
-  private prevSubSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private submissionSearchOpts: ThemeQueryRequest = {
-    page: 1,
-    perPage: 50,
-    filters: "All",
-    order: "Last Updated",
-    search: "",
-  };
-  private submissionServerFilters: FilterQueryResponse = {
-    filters: ["All"],
-    order: ["Last Updated"],
-  };
-  private submissionThemeList: ThemeQueryResponse = { total: 0, items: [] };
-
-  private dummyFuncResult: boolean = false;
-  private menuMusic: any = null;
-  private soundPatchInstance: any = null;
-  private volumePatchInstance: any = null;
-  private legacyEnabled: boolean = false;
-  private gainNode: any = null;
-  private soundVolume: number = 1;
-  private musicVolume: number = 0.5;
-  private gamesRunning: Number[] = [];
-  private activeSound: string = "Default";
-  private soundPacks: Pack[] = [];
-  private selectedMusic: string = "None";
-  private browserPackList: packDbEntry[] = [];
-  private searchFieldValue: string = "";
-  private selectedSort: number = 3;
-  private selectedTarget: SingleDropdownOption = {
-    data: 1,
-    label: "All",
-  };
-  private isInstalling: boolean = false;
-
-  // You can listen to this eventBus' 'stateUpdate' event and use that to trigger a useState or other function that causes a re-render
-  public eventBus = new EventTarget();
-
-  getPublicState() {
-    return {
-      apiUrl: this.apiUrl,
-      apiShortToken: this.apiShortToken,
-      apiFullToken: this.apiFullToken,
-      apiTokenExpireDate: this.apiTokenExpireDate,
-      apiMeData: this.apiMeData,
-
-      currentExpandedTheme: this.currentExpandedTheme,
-      legacyEnabled: this.legacyEnabled,
-      currentTab: this.currentTab,
-      dummyFuncResult: this.dummyFuncResult,
-      menuMusic: this.menuMusic,
-      soundPatchInstance: this.soundPatchInstance,
-      volumePatchInstance: this.volumePatchInstance,
-      gainNode: this.gainNode,
-      soundVolume: this.soundVolume,
-      musicVolume: this.musicVolume,
-      gamesRunning: this.gamesRunning,
-      activeSound: this.activeSound,
-      soundPacks: this.soundPacks,
-      selectedMusic: this.selectedMusic,
-      browserPackList: this.browserPackList,
-      searchFieldValue: this.searchFieldValue,
-      selectedSort: this.selectedSort,
-      selectedTarget: this.selectedTarget,
-      isInstalling: this.isInstalling,
-
-      // Browse Page
-      themeSearchOpts: this.themeSearchOpts,
-      serverFilters: this.serverFilters,
-      browseThemeList: this.browseThemeList,
-      prevSearchOpts: this.prevSearchOpts,
-
-      // Starred
-      prevStarSearchOpts: this.prevStarSearchOpts,
-      starredSearchOpts: this.starredSearchOpts,
-      starredServerFilters: this.starredServerFilters,
-      starredThemeList: this.starredThemeList,
-
-      // Submissions
-      prevSubSearchOpts: this.prevSubSearchOpts,
-      submissionSearchOpts: this.submissionSearchOpts,
-      submissionServerFilters: this.submissionServerFilters,
-      submissionThemeList: this.submissionThemeList,
+    // Browse Tab
+    private browseThemeList: ThemeQueryResponse = { total: 0, items: [] };
+    private prevSearchOpts: ThemeQueryRequest = {
+      page: 1,
+      perPage: 50,
+      filters: "All",
+      order: "Last Updated",
+      search: "",
     };
-  }
+    private serverFilters: FilterQueryResponse = {
+      filters: ["All"],
+      order: ["Last Updated"],
+    };
+    private themeSearchOpts: ThemeQueryRequest = {
+      page: 1,
+      perPage: 50,
+      filters: "All",
+      order: "Last Updated",
+      search: "",
+    };
 
-  getGlobalState(key: string) {
-    return this[key];
-  }
+    // Stars
+    private prevStarSearchOpts: ThemeQueryRequest = {
+      page: 1,
+      perPage: 50,
+      filters: "All",
+      order: "Last Updated",
+      search: "",
+    };
+    private starredSearchOpts: ThemeQueryRequest = {
+      page: 1,
+      perPage: 50,
+      filters: "All",
+      order: "Last Updated",
+      search: "",
+    };
+    private starredServerFilters: FilterQueryResponse = {
+      filters: ["All"],
+      order: ["Last Updated"],
+    };
+    private starredThemeList: ThemeQueryResponse = { total: 0, items: [] };
 
-  setGlobalState(key: string, data: any) {
-    this[key] = data;
-    this.forceUpdate();
-  }
+    // Submissions
+    private prevSubSearchOpts: ThemeQueryRequest = {
+      page: 1,
+      perPage: 50,
+      filters: "All",
+      order: "Last Updated",
+      search: "",
+    };
+    private submissionSearchOpts: ThemeQueryRequest = {
+      page: 1,
+      perPage: 50,
+      filters: "All",
+      order: "Last Updated",
+      search: "",
+    };
+    private submissionServerFilters: FilterQueryResponse = {
+      filters: ["All"],
+      order: ["Last Updated"],
+    };
+    private submissionThemeList: ThemeQueryResponse = { total: 0, items: [] };
 
-  private forceUpdate() {
-    this.eventBus.dispatchEvent(new Event("stateUpdate"));
-  }
+    private dummyFuncResult: boolean = false;
+    private menuMusic: any = null;
+    private soundPatchInstance: any = null;
+    private volumePatchInstance: any = null;
+    private gainNode: any = null;
+    private soundVolume: number = 1;
+    private musicVolume: number = 0.5;
+    private gamesRunning: Number[] = [];
+    private activeSound: string = "Default";
+    private soundPacks: Pack[] = [];
+    private selectedMusic: string = "None";
+    private browserPackList: packDbEntry[] = [];
+    private searchFieldValue: string = "";
+    private selectedSort: number = 3;
+    private selectedTarget: SingleDropdownOption = {
+      data: 1,
+      label: "All",
+    };
+    private isInstalling: boolean = false;
+
+    // Music player
+    private selectedTrack: string = "";
+    private currentTrack: Track | null = null;
+    private musicPlaying: boolean = false;
+    private musicShuffle: boolean = false;
+    // "one" matches the original behaviour (the menu music loops)
+    private musicRepeat: RepeatMode = "one";
+    private randomSoundOnLaunch: boolean = false;
+    private randomMusicOnLaunch: boolean = false;
+
+    // You can listen to this eventBus' 'stateUpdate' event and use that to trigger a useState or other function that causes a re-render
+    public eventBus = new EventTarget();
+
+    getPublicState() {
+      return {
+        apiUrl: this.apiUrl,
+        apiShortToken: this.apiShortToken,
+        apiFullToken: this.apiFullToken,
+        apiTokenExpireDate: this.apiTokenExpireDate,
+        apiMeData: this.apiMeData,
+
+        currentExpandedTheme: this.currentExpandedTheme,
+        currentTab: this.currentTab,
+        dummyFuncResult: this.dummyFuncResult,
+        menuMusic: this.menuMusic,
+        soundPatchInstance: this.soundPatchInstance,
+        volumePatchInstance: this.volumePatchInstance,
+        gainNode: this.gainNode,
+        soundVolume: this.soundVolume,
+        musicVolume: this.musicVolume,
+        gamesRunning: this.gamesRunning,
+        activeSound: this.activeSound,
+        soundPacks: this.soundPacks,
+        selectedMusic: this.selectedMusic,
+        browserPackList: this.browserPackList,
+        searchFieldValue: this.searchFieldValue,
+        selectedSort: this.selectedSort,
+        selectedTarget: this.selectedTarget,
+        isInstalling: this.isInstalling,
+        selectedTrack: this.selectedTrack,
+        currentTrack: this.currentTrack,
+        musicPlaying: this.musicPlaying,
+        musicShuffle: this.musicShuffle,
+        musicRepeat: this.musicRepeat,
+        randomSoundOnLaunch: this.randomSoundOnLaunch,
+        randomMusicOnLaunch: this.randomMusicOnLaunch,
+
+        // Browse Page
+        themeSearchOpts: this.themeSearchOpts,
+        serverFilters: this.serverFilters,
+        browseThemeList: this.browseThemeList,
+        prevSearchOpts: this.prevSearchOpts,
+
+        // Starred
+        prevStarSearchOpts: this.prevStarSearchOpts,
+        starredSearchOpts: this.starredSearchOpts,
+        starredServerFilters: this.starredServerFilters,
+        starredThemeList: this.starredThemeList,
+
+        // Submissions
+        prevSubSearchOpts: this.prevSubSearchOpts,
+        submissionSearchOpts: this.submissionSearchOpts,
+        submissionServerFilters: this.submissionServerFilters,
+        submissionThemeList: this.submissionThemeList,
+      };
+    }
+
+    getGlobalState(key: string) {
+      return this[key];
+    }
+
+    setGlobalState(key: string, data: any) {
+      this[key] = data;
+      this.forceUpdate();
+    }
+
+    private forceUpdate() {
+      this.eventBus.dispatchEvent(new Event("stateUpdate"));
+    }
 }
 
 const GlobalStateContext = createContext<PublicGlobalStateContext>(null as any);
@@ -249,13 +272,13 @@ export const GlobalStateContextProvider: FC<ProviderProps> = ({ children, global
 
   return (
     <GlobalStateContext.Provider
-      value={{
-        ...publicState,
-        getGlobalState,
-        setGlobalState,
-      }}
+    value={{
+      ...publicState,
+      getGlobalState,
+      setGlobalState,
+    }}
     >
-      {children}
+    {children}
     </GlobalStateContext.Provider>
   );
 };
