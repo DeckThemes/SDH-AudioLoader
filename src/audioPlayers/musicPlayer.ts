@@ -123,7 +123,6 @@ function playTrack(track: Track, withIntro: boolean) {
   set("selectedMusic", track.pack);
   set("selectedTrack", track.file);
   set("currentTrack", track);
-  saveConfig();
 
   const mainSrc = trackPath(pack, track.file);
   const useIntro = withIntro && pack.hasIntro;
@@ -139,6 +138,8 @@ function playTrack(track: Track, withIntro: boolean) {
   a.onplaying = () => {
     errorStreak = 0;
   };
+  // The only place the song is saved: once it has genuinely started, so a failed load can't overwrite it
+  a.addEventListener("playing", () => saveConfig(), { once: true });
   a.onended = () => {
     if (phase === "intro") {
       startMainPhase(a, mainSrc);
