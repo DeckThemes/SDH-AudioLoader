@@ -14,7 +14,6 @@ starter_config_data = {
   "selected_track": "",
   "sound_volume": 1,
   "music_volume": 0.5,
-  "legacy_enabled": False,
   "music_shuffle": False,
   "music_repeat": "one",
   "random_sound_on_launch": False,
@@ -55,7 +54,7 @@ class Result:
 
         if not self.success:
             Log(f"Result failed! {message}")
-    
+
     def raise_on_failure(self):
         if not self.success:
             raise Exception(self.message)
@@ -74,11 +73,11 @@ class Pack:
         self.mappings = json["mappings"] if ("mappings" in json) else {}
         self.music = bool(json["music"]) if ("music" in json) else False
         self.id = json["id"] if ("id" in json) else self.name
-        
+
 
         if (AUDIO_LOADER_VERSION < self.require):
             raise Exception("Audio Loader - {} requires Audio Loader version {} but only version {} is installed".format(self.name, self.require, AUDIO_LOADER_VERSION))
-        
+
         self.packPath = packPath
         self.truncatedPackPath = truncatedPackPath
 
@@ -166,14 +165,14 @@ class Plugin:
             if x.name == name:
                 pack = x
                 break
-        
+
         if (pack == None):
             return Result(False, f"Could not find {name}")
-        
+
         result = await pack.delete()
         if not result.success:
             return result.to_dict()
-        
+
         self.soundPacks.remove(pack)
         return Result(True).to_dict()
 
@@ -197,7 +196,7 @@ class Plugin:
             try:
                 with open(packDataPath, "r") as f:
                     pack = json.load(f)
-                
+
                 packData = Pack(packPath, pack, p)
 
                 if (packData.name not in [p.name for p in self.soundPacks]):
@@ -208,14 +207,14 @@ class Plugin:
 
     async def store_read(self, key : str) -> str:
         return util_store_read(key)
-    
+
     async def store_write(self, key : str, val : str) -> dict:
         util_store_write(key, val)
         return Result(True).to_dict()
 
     async def _load(self):
         packsPath = get_pack_path()
-        
+
         configPath = os.path.join(get_pack_path(), 'config.json')
 
         Log("Audio Loader - Finding sound packs...")
@@ -233,7 +232,7 @@ class Plugin:
         await self.parse_packs(self)
         await self.get_config(self)
 
-        
+
         Log("Audio Loader - Config existing is {}".format(os.path.exists(configPath)))
 
 
