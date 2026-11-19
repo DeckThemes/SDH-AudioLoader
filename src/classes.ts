@@ -70,7 +70,8 @@ export type Mappings =
     }
   | {};
 
-export type RepeatMode = "off" | "all" | "one";
+// "one" loops the current song; "off" plays on and wraps around the queue
+export type RepeatMode = "off" | "one";
 
 export interface Track {
   pack: string; // Pack name
